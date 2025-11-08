@@ -3,7 +3,6 @@ package com.plcoding.chat.data.notification
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.plcoding.chat.domain.notification.DeviceTokenService
 import com.plcoding.core.domain.auth.SessionStorage
-import com.plcoding.core.domain.platform
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
