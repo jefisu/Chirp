@@ -40,6 +40,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun LoginRoot(
     viewModel: LoginViewModel = koinViewModel(),
     onLoginSuccess: () -> Unit,
+    onNavigateToVerifyEmail: (String) -> Unit,
     onForgotPasswordClick: () -> Unit,
     onCreateAccountClick: () -> Unit
 ) {
@@ -48,6 +49,7 @@ fun LoginRoot(
     ObserveAsEvents(viewModel.events) { event ->
         when(event) {
             LoginEvent.Success -> onLoginSuccess()
+            is LoginEvent.VerifyEmail -> onNavigateToVerifyEmail(event.email)
         }
     }
 

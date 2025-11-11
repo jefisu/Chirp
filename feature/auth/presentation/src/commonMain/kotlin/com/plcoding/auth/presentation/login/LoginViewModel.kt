@@ -120,6 +120,11 @@ class LoginViewModel(
                         else -> error.toUiText()
                     }
 
+                    if (error == DataError.Remote.FORBIDDEN) {
+                        authService.resendVerificationEmail(email)
+                        eventChannel.send(LoginEvent.VerifyEmail(email))
+                    }
+
                     _state.update { it.copy(
                         error = errorMessage,
                         isLoggingIn = false
