@@ -8,7 +8,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
-import androidx.compose.ui.draganddrop.awtTransferable
+import com.plcoding.core.presentation.media.PickedImageData
+import com.plcoding.core.presentation.media.allowedImageExtensions
+import com.plcoding.core.presentation.media.getMimeTypeFromFileName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.awt.datatransfer.DataFlavor
@@ -53,7 +55,8 @@ actual fun rememberDragAndDropTarget(
                         onDrop(
                             PickedImageData(
                                 bytes = file.readBytes(),
-                                mimeType = mimeType
+                                mimeType = mimeType,
+                                name = file.name
                             )
                         )
                     }

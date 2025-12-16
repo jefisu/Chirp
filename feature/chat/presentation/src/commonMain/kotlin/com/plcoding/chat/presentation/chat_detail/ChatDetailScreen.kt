@@ -60,6 +60,9 @@ import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
+import com.plcoding.core.presentation.media.ImagePickerMode
+import com.plcoding.core.presentation.media.rememberImagePickerLauncher
+import com.plcoding.chat.presentation.util.toFile
 import com.plcoding.core.presentation.util.ObserveAsEvents
 import com.plcoding.core.presentation.util.UiText
 import com.plcoding.core.presentation.util.clearFocusOnTap
@@ -108,7 +111,7 @@ fun ChatDetailRoot(
     }
 
     LaunchedEffect(chatId, state.messages) {
-        if(state.messages.isNotEmpty()) {
+        if (state.messages.isNotEmpty()) {
             messageListState.scrollToItem(0)
         }
     }
@@ -156,6 +159,12 @@ fun ChatDetailScreen(
             .messages
             .filter { it is MessageUi.LocalUserMessage || it is MessageUi.OtherUserMessage }
             .size
+    }
+
+    val imagePickerLauncher = rememberImagePickerLauncher(
+        mode = ImagePickerMode.Multiple(maxItems = 10),
+    ) { pickedImages ->
+        onAction(ChatDetailAction.OnImagesSelected(pickedImages))
     }
 
     LaunchedEffect(messageListState) {
@@ -297,8 +306,13 @@ fun ChatDetailScreen(
                                 messageTextFieldState = state.messageTextFieldState,
                                 isSendButtonEnabled = state.canSendMessage,
                                 connectionState = state.connectionState,
+                                attachedImages = state.imagesSelected,
                                 onSendClick = {
                                     onAction(ChatDetailAction.OnSendMessageClick)
+                                },
+                                onAttachFilesClick = imagePickerLauncher::launch,
+                                onRemoveAttachmentClick = {
+                                    onAction(ChatDetailAction.OnRemoveImageSelected(it))
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -326,8 +340,13 @@ fun ChatDetailScreen(
                             messageTextFieldState = state.messageTextFieldState,
                             isSendButtonEnabled = state.canSendMessage,
                             connectionState = state.connectionState,
+                            attachedImages = state.imagesSelected,
                             onSendClick = {
                                 onAction(ChatDetailAction.OnSendMessageClick)
+                            },
+                            onAttachFilesClick = imagePickerLauncher::launch,
+                            onRemoveAttachmentClick = {
+                                onAction(ChatDetailAction.OnRemoveImageSelected(it))
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -346,7 +365,7 @@ fun ChatDetailScreen(
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                if(state.bannerState.formattedDate != null) {
+                if (state.bannerState.formattedDate != null) {
                     DateChip(
                         date = state.bannerState.formattedDate.asString()
                     )

@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalForeignApi::class)
 
-package com.plcoding.chat.presentation.profile.mediapicker
+package com.plcoding.core.presentation.media
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -27,8 +27,10 @@ import platform.darwin.dispatch_group_notify
 import platform.posix.memcpy
 
 @Composable
-actual fun rememberImagePickerLauncher(
-    onResult: (PickedImageData) -> Unit
+actual fun <PickerResult> rememberImagePickerLauncher(
+    onError: ((String) -> Unit)?,
+    mode: ImagePickerMode<PickerResult>,
+    onResult: (PickerResult) -> Unit
 ): ImagePickerLauncher {
     val scope = rememberCoroutineScope()
     val delegate = remember {
@@ -37,19 +39,17 @@ actual fun rememberImagePickerLauncher(
                 picker.dismissViewControllerAnimated(true, null)
 
                 val results = didFinishPicking.filterIsInstance<PHPickerResult>()
-
                 val dispatchGroup = dispatch_group_create()
                 val imageDataList = mutableListOf<PickedImageData>()
 
-                for(result in results) {
+                for (result in results) {
                     dispatch_group_enter(dispatchGroup)
 
                     val itemProvider = result.itemProvider
-
                     val typeIdentifiers = itemProvider.registeredTypeIdentifiers
                     val primaryType = typeIdentifiers.firstOrNull() as? String
 
-                    if(primaryType == null) {
+                    if (primaryType == null) {
                         dispatch_group_leave(dispatchGroup)
                         continue
                     }
@@ -58,63 +58,70 @@ actual fun rememberImagePickerLauncher(
                         .typeWithIdentifier(primaryType)
                         ?.preferredMIMEType
 
-                    if(mimeType == null) {
+                    if (mimeType == null) {
                         dispatch_group_leave(dispatchGroup)
                         continue
                     }
 
                     itemProvider.loadDataRepresentationForTypeIdentifier(
                         typeIdentifier = primaryType
-                    ) { nsData, nsError ->
+                    ) { nsData, _ ->
+                        if (nsData == null) return@loadDataRepresentationForTypeIdentifier
+
                         scope.launch {
-                            nsData?.let {
-                                val bytes = ByteArray(it.length.toInt())
+                            val bytes = ByteArray(nsData.length.toInt())
 
-                                withContext(Dispatchers.Default) {
-                                    memcpy(bytes.refTo(0), it.bytes, it.length)
-                                }
-
-                                imageDataList.add(
-                                    PickedImageData(
-                                        bytes = bytes,
-                                        mimeType = mimeType
-                                    )
-                                )
+                            withContext(Dispatchers.Default) {
+                                memcpy(bytes.refTo(0), nsData.bytes, nsData.length)
                             }
+
+                            imageDataList.add(
+                                PickedImageData(
+                                    bytes = bytes,
+                                    mimeType = mimeType
+                                ).also { image ->
+                                    itemProvider.suggestedName?.let { image.copy(name = it) }
+                                }
+                            )
                             dispatch_group_leave(dispatchGroup)
                         }
                     }
+                }
 
-                    dispatch_group_notify(dispatchGroup, dispatch_get_main_queue()) {
-                        scope.launch {
-                            imageDataList.firstOrNull()?.let { item ->
-                                onResult(item)
-                            }
-                        }
-                    }
+                dispatch_group_notify(dispatchGroup, dispatch_get_main_queue()) {
+                    @Suppress("UNCHECKED_CAST")
+                    mode.consumeResult(
+                        result = when (mode) {
+                            ImagePickerMode.Single -> imageDataList.firstOrNull()
+                            is ImagePickerMode.Multiple -> imageDataList
+                        } as PickerResult,
+                        onConsumed = onResult
+                    )
                 }
             }
         }
     }
 
     return remember {
-        val pickerViewController = PHPickerViewController(
-            configuration = PHPickerConfiguration().apply {
-                setSelectionLimit(1)
-                setFilter(PHPickerFilter.imagesFilter)
-                setSelection(PHPickerConfigurationSelectionOrdered)
+        ImagePickerLauncher {
+            val maxItems = when (mode) {
+                is ImagePickerMode.Multiple -> mode.maxItems
+                ImagePickerMode.Single -> 1
             }
-        )
-        pickerViewController.delegate = delegate
+            val pickerViewController = PHPickerViewController(
+                configuration = PHPickerConfiguration().apply {
+                    setSelectionLimit(maxItems.toLong())
+                    setFilter(PHPickerFilter.imagesFilter)
+                    setSelection(PHPickerConfigurationSelectionOrdered)
+                }
+            )
+            pickerViewController.delegate = delegate
 
-        ImagePickerLauncher(
-            onLaunch = {
-                UIApplication.sharedApplication.keyWindow?.rootViewController?.presentViewController(
-                    pickerViewController,
-                    true,
-                    null
-                )
-            }
-        )
+            UIApplication.sharedApplication.keyWindow?.rootViewController?.presentViewController(
+                pickerViewController,
+                true,
+                null
+            )
+        }
     }
 }

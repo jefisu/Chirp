@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -51,7 +49,7 @@ import com.plcoding.chat.presentation.profile.components.DragAndDropOverlay
 import com.plcoding.chat.presentation.profile.components.ProfileHeaderSection
 import com.plcoding.chat.presentation.profile.components.ProfileSectionLayout
 import com.plcoding.chat.presentation.profile.mediapicker.rememberDragAndDropTarget
-import com.plcoding.chat.presentation.profile.mediapicker.rememberImagePickerLauncher
+import com.plcoding.core.presentation.media.rememberImagePickerLauncher
 import com.plcoding.core.designsystem.components.avatar.AvatarSize
 import com.plcoding.core.designsystem.components.avatar.ChirpAvatarPhoto
 import com.plcoding.core.designsystem.components.brand.ChirpHorizontalDivider
@@ -63,6 +61,7 @@ import com.plcoding.core.designsystem.components.textfields.ChirpPasswordTextFie
 import com.plcoding.core.designsystem.components.textfields.ChirpTextField
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
+import com.plcoding.core.presentation.media.ImagePickerMode
 import com.plcoding.core.presentation.util.DeviceConfiguration
 import com.plcoding.core.presentation.util.clearFocusOnTap
 import com.plcoding.core.presentation.util.currentDeviceConfiguration
@@ -78,11 +77,15 @@ fun ProfileRoot(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    val launcher = rememberImagePickerLauncher { pickedImageData ->
-        viewModel.onAction(ProfileAction.OnPictureSelected(
-            pickedImageData.bytes,
-            pickedImageData.mimeType
-        ))
+    val launcher = rememberImagePickerLauncher(
+        mode = ImagePickerMode.Single,
+    ) { pickedImageData ->
+        pickedImageData?.let {
+            viewModel.onAction(ProfileAction.OnPictureSelected(
+                pickedImageData.bytes,
+                pickedImageData.mimeType
+            ))
+        }
     }
 
     ChirpAdaptiveDialogSheetLayout(

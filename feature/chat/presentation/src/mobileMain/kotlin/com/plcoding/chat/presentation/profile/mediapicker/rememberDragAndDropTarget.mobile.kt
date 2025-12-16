@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
+import com.plcoding.core.presentation.media.PickedImageData
 
 // Drag and drop not supported on mobile platforms
 @Composable

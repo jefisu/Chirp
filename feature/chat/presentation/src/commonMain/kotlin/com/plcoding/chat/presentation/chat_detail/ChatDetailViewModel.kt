@@ -22,6 +22,7 @@ import com.plcoding.core.domain.util.DataErrorException
 import com.plcoding.core.domain.util.Paginator
 import com.plcoding.core.domain.util.onFailure
 import com.plcoding.core.domain.util.onSuccess
+import com.plcoding.core.presentation.media.PickedImageData
 import com.plcoding.core.presentation.util.UiText
 import com.plcoding.core.presentation.util.toUiText
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -136,14 +137,30 @@ class ChatDetailViewModel(
             ChatDetailAction.OnHideBanner -> hideBanner()
             is ChatDetailAction.OnTopVisibleIndexChanged -> updateBanner(action.topVisibleIndex)
             is ChatDetailAction.OnFirstVisibleIndexChanged -> updateNearBottom(action.index)
+            is ChatDetailAction.OnImagesSelected -> updateImagesSelected(action.images)
+            is ChatDetailAction.OnRemoveImageSelected -> removeImageSelected(action.image)
             else -> Unit
         }
     }
 
-    private fun updateNearBottom(firstVisibleIndex: Int) {
+    private fun removeImageSelected(image: PickedImageData) {
+        _state.update { it.copy(imagesSelected = it.imagesSelected - image) }
+    }
+
+    private fun updateImagesSelected(images: List<PickedImageData>) {
         _state.update { it.copy(
-            isNearBottom = firstVisibleIndex <= 3
+            imagesSelected = it.imagesSelected + images.filter { image ->
+                !it.imagesSelected.contains(image)
+            }
         ) }
+    }
+
+    private fun updateNearBottom(firstVisibleIndex: Int) {
+        _state.update {
+            it.copy(
+                isNearBottom = firstVisibleIndex <= 3
+            )
+        }
     }
 
     private fun updateBanner(topVisibleIndex: Int) {
@@ -152,19 +169,21 @@ class ChatDetailViewModel(
             index = topVisibleIndex
         )
 
-        _state.update { it.copy(
-            bannerState = BannerState(
-                formattedDate = visibleDate,
-                isVisible = visibleDate != null
+        _state.update {
+            it.copy(
+                bannerState = BannerState(
+                    formattedDate = visibleDate,
+                    isVisible = visibleDate != null
+                )
             )
-        ) }
+        }
     }
 
     private fun calculateBannerDateFromIndex(
         messages: List<MessageUi>,
         index: Int
     ): UiText? {
-        if(messages.isEmpty() || index < 0 || index >= messages.size) {
+        if (messages.isEmpty() || index < 0 || index >= messages.size) {
             return null
         }
 
@@ -172,14 +191,15 @@ class ChatDetailViewModel(
             .asSequence()
             .mapNotNull { index ->
                 val item = messages.getOrNull(index)
-                if(item is MessageUi.DateSeparator) item.date else null
+                if (item is MessageUi.DateSeparator) item.date else null
             }
             .firstOrNull()
 
-        return when(nearestDateSeparator) {
+        return when (nearestDateSeparator) {
             is UiText.Resource -> {
-                if(nearestDateSeparator.id == Res.string.today) null else nearestDateSeparator
+                if (nearestDateSeparator.id == Res.string.today) null else nearestDateSeparator
             }
+
             else -> nearestDateSeparator
         }
     }
