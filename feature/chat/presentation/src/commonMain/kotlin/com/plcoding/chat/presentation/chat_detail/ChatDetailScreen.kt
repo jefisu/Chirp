@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -29,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -41,8 +43,10 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import chirp.feature.chat.presentation.generated.resources.Res
+import chirp.feature.chat.presentation.generated.resources.drop_images_to_share
 import chirp.feature.chat.presentation.generated.resources.no_chat_selected
 import chirp.feature.chat.presentation.generated.resources.select_a_chat
 import com.plcoding.chat.domain.models.ChatMessage
@@ -57,12 +61,13 @@ import com.plcoding.chat.presentation.components.ChatHeader
 import com.plcoding.chat.presentation.components.EmptySection
 import com.plcoding.chat.presentation.model.ChatUi
 import com.plcoding.chat.presentation.model.MessageUi
+import com.plcoding.chat.presentation.profile.components.DragAndDropOverlay
+import com.plcoding.chat.presentation.profile.mediapicker.rememberDragAndDropTarget
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
 import com.plcoding.core.presentation.media.ImagePickerMode
 import com.plcoding.core.presentation.media.rememberImagePickerLauncher
-import com.plcoding.chat.presentation.util.toFile
 import com.plcoding.core.presentation.util.ObserveAsEvents
 import com.plcoding.core.presentation.util.UiText
 import com.plcoding.core.presentation.util.clearFocusOnTap
@@ -167,6 +172,22 @@ fun ChatDetailScreen(
         onAction(ChatDetailAction.OnImagesSelected(pickedImages))
     }
 
+    var isHoveringWithFiles by rememberSaveable { mutableStateOf(false) }
+    val dragAndDropTarget = rememberDragAndDropTarget(
+        onHover = { isHovered ->
+            isHoveringWithFiles = isHovered
+        },
+        onDrop = { imageData ->
+            onAction(ChatDetailAction.OnImagesSelected(listOf(imageData)))
+        }
+    )
+    if (isHoveringWithFiles) {
+        DragAndDropOverlay(
+            modifier = Modifier.zIndex(1f),
+            description = stringResource(Res.string.drop_images_to_share)
+        )
+    }
+
     LaunchedEffect(messageListState) {
         snapshotFlow {
             messageListState.firstVisibleItemIndex to messageListState.layoutInfo.totalItemsCount
@@ -206,7 +227,11 @@ fun ChatDetailScreen(
 
     Scaffold(
         modifier = Modifier
-            .fillMaxSize(),
+            .fillMaxSize()
+            .dragAndDropTarget(
+                shouldStartDragAndDrop = { true },
+                target = dragAndDropTarget
+            ),
         containerColor = if (!configuration.isWideScreen) {
             MaterialTheme.colorScheme.surface
         } else {

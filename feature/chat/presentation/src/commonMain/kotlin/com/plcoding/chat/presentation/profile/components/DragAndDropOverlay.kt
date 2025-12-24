@@ -22,7 +22,8 @@ import org.jetbrains.compose.resources.vectorResource
 
 @Composable
 fun DragAndDropOverlay(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    description: String
 ) {
     Column(
         modifier = modifier
@@ -34,11 +35,13 @@ fun DragAndDropOverlay(
         Icon(
             imageVector = vectorResource(Res.drawable.upload_icon),
             contentDescription = stringResource(Res.string.upload_image),
-            modifier = Modifier.size(100.dp)
+            modifier = Modifier.size(100.dp),
+            tint = MaterialTheme.colorScheme.onBackground
         )
         Text(
-            text = stringResource(Res.string.drop_picture_info),
-            style = MaterialTheme.typography.titleMedium
+            text = description,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground
         )
     }
 }

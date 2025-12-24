@@ -36,6 +36,7 @@ import chirp.feature.chat.presentation.generated.resources.current_password
 import chirp.feature.chat.presentation.generated.resources.delete
 import chirp.feature.chat.presentation.generated.resources.delete_profile_picture
 import chirp.feature.chat.presentation.generated.resources.delete_profile_picture_desc
+import chirp.feature.chat.presentation.generated.resources.drop_picture_info
 import chirp.feature.chat.presentation.generated.resources.email
 import chirp.feature.chat.presentation.generated.resources.new_password
 import chirp.feature.chat.presentation.generated.resources.password
@@ -291,7 +292,9 @@ fun ProfileScreen(
     }
 
     if(isHoveringWithFile) {
-        DragAndDropOverlay()
+        DragAndDropOverlay(
+            description = stringResource(Res.string.drop_picture_info)
+        )
     }
 
     if(state.showDeleteConfirmationDialog) {
