@@ -62,7 +62,7 @@ import com.plcoding.chat.presentation.components.EmptySection
 import com.plcoding.chat.presentation.model.ChatUi
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.profile.components.DragAndDropOverlay
-import com.plcoding.chat.presentation.profile.mediapicker.rememberDragAndDropTarget
+import com.plcoding.core.presentation.media.rememberDragAndDropTarget
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
 import com.plcoding.core.designsystem.components.dialogs.ErrorDialog
 import com.plcoding.core.designsystem.theme.ChirpTheme
@@ -180,11 +180,12 @@ fun ChatDetailScreen(
 
     var isHoveringWithFiles by rememberSaveable { mutableStateOf(false) }
     val dragAndDropTarget = rememberDragAndDropTarget(
+        mode = ImagePickerMode.Multiple(maxItems = 10),
         onHover = { isHovered ->
             isHoveringWithFiles = isHovered
         },
-        onDrop = { imageData ->
-            onAction(ChatDetailAction.OnImagesSelected(listOf(imageData)))
+        onDrop = { droppedImages ->
+            onAction(ChatDetailAction.OnImagesSelected(droppedImages))
         },
         onError = { error ->
             onEvent(ChatDetailEvent.OnError(error))

@@ -49,7 +49,7 @@ import chirp.feature.chat.presentation.generated.resources.upload_image
 import com.plcoding.chat.presentation.profile.components.DragAndDropOverlay
 import com.plcoding.chat.presentation.profile.components.ProfileHeaderSection
 import com.plcoding.chat.presentation.profile.components.ProfileSectionLayout
-import com.plcoding.chat.presentation.profile.mediapicker.rememberDragAndDropTarget
+import com.plcoding.core.presentation.media.rememberDragAndDropTarget
 import com.plcoding.core.presentation.media.rememberImagePickerLauncher
 import com.plcoding.core.designsystem.components.avatar.AvatarSize
 import com.plcoding.core.designsystem.components.avatar.ChirpAvatarPhoto
@@ -117,14 +117,17 @@ fun ProfileScreen(
         mutableStateOf(false)
     }
     val dragAndDropTarget = rememberDragAndDropTarget(
+        mode = ImagePickerMode.Single,
         onHover = { isHovered ->
             isHoveringWithFile = isHovered
         },
         onDrop = { imageData ->
-            onAction(ProfileAction.OnPictureSelected(
-                bytes = imageData.bytes,
-                mimeType = imageData.mimeType
-            ))
+            imageData?.let {
+                onAction(ProfileAction.OnPictureSelected(
+                    bytes = imageData.bytes,
+                    mimeType = imageData.mimeType
+                ))
+            }
         }
     )
 

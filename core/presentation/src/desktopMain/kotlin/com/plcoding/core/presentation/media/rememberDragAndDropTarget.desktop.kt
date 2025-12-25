@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalComposeUiApi::class)
 
-package com.plcoding.chat.presentation.profile.mediapicker
+package com.plcoding.core.presentation.media
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -8,22 +8,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
-import com.plcoding.core.presentation.media.ImagePickerError
-import com.plcoding.core.presentation.media.PickedImageData
-import com.plcoding.core.presentation.media.allowedImageExtensions
-import com.plcoding.core.presentation.media.getMimeTypeFromFileName
 import com.plcoding.core.presentation.util.UiText
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.DropTargetDropEvent
 import java.io.File
 
 @Composable
-actual fun rememberDragAndDropTarget(
+actual fun <DropResult> rememberDragAndDropTarget(
     onError: ((UiText) -> Unit)?,
+    mode: ImagePickerMode<DropResult>,
     onHover: (Boolean) -> Unit,
-    onDrop: (PickedImageData) -> Unit
+    onDrop: (DropResult) -> Unit
 ): DragAndDropTarget {
     val scope = rememberCoroutineScope()
     return remember {
@@ -43,27 +42,36 @@ actual fun rememberDragAndDropTarget(
                     .getTransferData(DataFlavor.javaFileListFlavor)
                         as List<*>
 
-                if (fileList.size != 1) {
-                    return false
-                }
-
                 val hasInvalidExtension = fileList.any { (it as File).extension !in allowedImageExtensions }
                 if (hasInvalidExtension) {
                     onError?.invoke(ImagePickerError.InvalidMimeType.toUiText())
                     return false
                 }
 
-                val file = fileList.first() as File
                 scope.launch(Dispatchers.IO) {
-                    val mimeType = getMimeTypeFromFileName(file.name)
-                    onDrop(
-                        PickedImageData(
-                            bytes = file.readBytes(),
-                            mimeType = mimeType,
-                            name = file.name
-                        )
-                    )
+                    val pickedImages = fileList
+                        .map {
+                            async {
+                                val file = it as File
+                                val mimeType = getMimeTypeFromFileName(file.name)
+                                PickedImageData(
+                                    bytes = file.readBytes(),
+                                    mimeType = mimeType,
+                                    name = file.name
+                                )
+                            }
+                        }
+                        .awaitAll()
+
+                    @Suppress("UNCHECKED_CAST")
+                    val result = when (mode) {
+                        ImagePickerMode.Single -> pickedImages.first()
+                        is ImagePickerMode.Multiple -> pickedImages.take(mode.maxItems)
+                    } as DropResult
+
+                    onDrop(result)
                 }
+
                 return true
             }
         }
