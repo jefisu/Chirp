@@ -4,8 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import chirp.core.presentation.generated.resources.Res
-import chirp.core.presentation.generated.resources.error_invalid_images
 import chirp.core.presentation.generated.resources.select_a_image
+import com.plcoding.core.presentation.util.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -22,14 +22,12 @@ import kotlin.coroutines.resume
 
 @Composable
 actual fun <PickerResult> rememberImagePickerLauncher(
-    onError: ((String) -> Unit)?,
+    onError: ((UiText) -> Unit)?,
     mode: ImagePickerMode<PickerResult>,
     onResult: (PickerResult) -> Unit
 ): ImagePickerLauncher {
     val scope = rememberCoroutineScope()
     val dialogTitle = stringResource(Res.string.select_a_image)
-
-    val errorMessage = stringResource(Res.string.error_invalid_images)
 
     return remember(dialogTitle) {
         ImagePickerLauncher {
@@ -42,7 +40,7 @@ actual fun <PickerResult> rememberImagePickerLauncher(
 
                 val hasInvalidImageFiles = pickedImages.any { it.extension !in allowedImageExtensions }
                 if (hasInvalidImageFiles) {
-                    onError?.invoke(errorMessage)
+                    onError?.invoke(ImagePickerError.InvalidMimeType.toUiText())
                     return@launch
                 }
 

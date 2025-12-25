@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.util.fastMap
+import com.plcoding.core.presentation.util.UiText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -15,7 +16,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 actual fun <PickerResult> rememberImagePickerLauncher(
-    onError: ((String) -> Unit)?,
+    onError: ((UiText) -> Unit)?,
     mode: ImagePickerMode<PickerResult>,
     onResult: (PickerResult) -> Unit
 ): ImagePickerLauncher {

@@ -17,5 +17,5 @@
     <string name="error_service_unavailable">Service unavailable, please try again later</string>
     <string name="error_serialization">Serialization error</string>
     <string name="error_unable_to_send_message">An error happened while sending the message</string>
-    <string name="error_invalid_images">Invalid images selected</string>
+    <string name="error_invalid_images">Only images can be selected</string>
 </resources>

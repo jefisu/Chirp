@@ -8,9 +8,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
+import com.plcoding.core.presentation.media.ImagePickerError
 import com.plcoding.core.presentation.media.PickedImageData
 import com.plcoding.core.presentation.media.allowedImageExtensions
 import com.plcoding.core.presentation.media.getMimeTypeFromFileName
+import com.plcoding.core.presentation.util.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.awt.datatransfer.DataFlavor
@@ -19,6 +21,7 @@ import java.io.File
 
 @Composable
 actual fun rememberDragAndDropTarget(
+    onError: ((UiText) -> Unit)?,
     onHover: (Boolean) -> Unit,
     onDrop: (PickedImageData) -> Unit
 ): DragAndDropTarget {
@@ -40,30 +43,28 @@ actual fun rememberDragAndDropTarget(
                     .getTransferData(DataFlavor.javaFileListFlavor)
                         as List<*>
 
-                if(fileList.size != 1) {
+                if (fileList.size != 1) {
+                    return false
+                }
+
+                val hasInvalidExtension = fileList.any { (it as File).extension !in allowedImageExtensions }
+                if (hasInvalidExtension) {
+                    onError?.invoke(ImagePickerError.InvalidMimeType.toUiText())
                     return false
                 }
 
                 val file = fileList.first() as File
-                val hasValidExtension = allowedImageExtensions.any {
-                    file.extension.lowercase() == it
-                }
-
-                if(hasValidExtension) {
-                    scope.launch(Dispatchers.IO) {
-                        val mimeType = getMimeTypeFromFileName(file.name)
-                        onDrop(
-                            PickedImageData(
-                                bytes = file.readBytes(),
-                                mimeType = mimeType,
-                                name = file.name
-                            )
+                scope.launch(Dispatchers.IO) {
+                    val mimeType = getMimeTypeFromFileName(file.name)
+                    onDrop(
+                        PickedImageData(
+                            bytes = file.readBytes(),
+                            mimeType = mimeType,
+                            name = file.name
                         )
-                    }
-                    return true
+                    )
                 }
-
-                return false
+                return true
             }
         }
     }

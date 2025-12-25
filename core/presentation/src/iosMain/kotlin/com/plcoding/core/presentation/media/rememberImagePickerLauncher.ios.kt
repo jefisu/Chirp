@@ -5,6 +5,7 @@ package com.plcoding.core.presentation.media
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.plcoding.core.presentation.util.UiText
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.refTo
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +29,7 @@ import platform.posix.memcpy
 
 @Composable
 actual fun <PickerResult> rememberImagePickerLauncher(
-    onError: ((String) -> Unit)?,
+    onError: ((UiText) -> Unit)?,
     mode: ImagePickerMode<PickerResult>,
     onResult: (PickerResult) -> Unit
 ): ImagePickerLauncher {

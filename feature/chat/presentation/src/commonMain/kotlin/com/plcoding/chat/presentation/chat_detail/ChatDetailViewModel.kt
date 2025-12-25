@@ -139,8 +139,24 @@ class ChatDetailViewModel(
             is ChatDetailAction.OnFirstVisibleIndexChanged -> updateNearBottom(action.index)
             is ChatDetailAction.OnImagesSelected -> updateImagesSelected(action.images)
             is ChatDetailAction.OnRemoveImageSelected -> removeImageSelected(action.image)
+            ChatDetailAction.OnDismissErrorDialog -> dismissError()
             else -> Unit
         }
+    }
+
+    fun onEvent(event: ChatDetailEvent) {
+        when(event) {
+            is ChatDetailEvent.OnError -> showError(event.error)
+            else -> Unit
+        }
+    }
+
+    private fun showError(error: UiText) {
+        _state.update { it.copy(error = error) }
+    }
+
+    private fun dismissError() {
+        _state.update { it.copy(error = null) }
     }
 
     private fun removeImageSelected(image: PickedImageData) {

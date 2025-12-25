@@ -3,4 +3,6 @@
     <string name="hide_password">Hide password</string>
     <string name="show_password">Show password</string>
     <string name="dismiss_dialog">Dismiss dialog</string>
+    <string name="try_again">Try again</string>
+    <string name="error_dialog_title">Error</string>
 </resources>

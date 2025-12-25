@@ -64,6 +64,7 @@ import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.profile.components.DragAndDropOverlay
 import com.plcoding.chat.presentation.profile.mediapicker.rememberDragAndDropTarget
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
+import com.plcoding.core.designsystem.components.dialogs.ErrorDialog
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
 import com.plcoding.core.presentation.media.ImagePickerMode
@@ -145,7 +146,8 @@ fun ChatDetailRoot(
             }
             viewModel.onAction(action)
         },
-        snackbarState = snackbarState
+        snackbarState = snackbarState,
+        onEvent = viewModel::onEvent
     )
 }
 
@@ -156,6 +158,7 @@ fun ChatDetailScreen(
     isDetailPresent: Boolean,
     snackbarState: SnackbarHostState,
     onAction: (ChatDetailAction) -> Unit,
+    onEvent: (ChatDetailEvent) -> Unit,
 ) {
     val configuration = currentDeviceConfiguration()
 
@@ -168,6 +171,9 @@ fun ChatDetailScreen(
 
     val imagePickerLauncher = rememberImagePickerLauncher(
         mode = ImagePickerMode.Multiple(maxItems = 10),
+        onError = { error ->
+            onEvent(ChatDetailEvent.OnError(error))
+        }
     ) { pickedImages ->
         onAction(ChatDetailAction.OnImagesSelected(pickedImages))
     }
@@ -179,6 +185,9 @@ fun ChatDetailScreen(
         },
         onDrop = { imageData ->
             onAction(ChatDetailAction.OnImagesSelected(listOf(imageData)))
+        },
+        onError = { error ->
+            onEvent(ChatDetailEvent.OnError(error))
         }
     )
     if (isHoveringWithFiles) {
@@ -396,6 +405,14 @@ fun ChatDetailScreen(
                     )
                 }
             }
+
+            ErrorDialog(
+                isVisible = state.error != null,
+                description = state.error?.asString().orEmpty(),
+                onDismissClick = {
+                    onAction(ChatDetailAction.OnDismissErrorDialog)
+                }
+            )
         }
     }
 }
@@ -431,7 +448,8 @@ private fun ChatDetailEmptyPreview() {
             isDetailPresent = false,
             onAction = {},
             messageListState = rememberLazyListState(),
-            snackbarState = remember { SnackbarHostState() }
+            snackbarState = remember { SnackbarHostState() },
+            onEvent = {}
         )
     }
 }
@@ -501,7 +519,8 @@ private fun ChatDetailMessagesPreview() {
             ),
             isDetailPresent = true,
             onAction = {},
-            snackbarState = remember { SnackbarHostState() }
+            snackbarState = remember { SnackbarHostState() },
+            onEvent = {}
         )
     }
 }
