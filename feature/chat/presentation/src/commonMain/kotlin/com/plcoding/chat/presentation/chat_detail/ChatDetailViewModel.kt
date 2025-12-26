@@ -145,7 +145,7 @@ class ChatDetailViewModel(
     }
 
     fun onEvent(event: ChatDetailEvent) {
-        when(event) {
+        when (event) {
             is ChatDetailEvent.OnError -> showError(event.error)
             else -> Unit
         }
@@ -164,11 +164,12 @@ class ChatDetailViewModel(
     }
 
     private fun updateImagesSelected(images: List<PickedImageData>) {
-        _state.update { it.copy(
-            imagesSelected = it.imagesSelected + images.filter { image ->
-                !it.imagesSelected.contains(image)
-            }
-        ) }
+        _state.update {
+            val maxItems = 10
+            val updatedImages = it.imagesSelected +
+                    images.filter { image -> !it.imagesSelected.contains(image) }
+            it.copy(imagesSelected = updatedImages.take(maxItems))
+        }
     }
 
     private fun updateNearBottom(firstVisibleIndex: Int) {

@@ -1,10 +1,15 @@
 package com.plcoding.chat.presentation.chat_detail.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +46,8 @@ import com.plcoding.core.designsystem.components.textfields.ChirpMultiLineTextFi
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
 import com.plcoding.core.presentation.media.PickedImageData
+import com.plcoding.core.presentation.util.DeviceConfiguration
+import com.plcoding.core.presentation.util.currentDeviceConfiguration
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -55,9 +62,89 @@ fun MessageBox(
     onAttachFilesClick: () -> Unit,
     onRemoveAttachmentClick: (PickedImageData) -> Unit,
     modifier: Modifier = Modifier,
-    renderingImage: PickedImageData? = null
 ) {
     val isConnected = connectionState == ConnectionState.CONNECTED
+    val deviceConfiguration = currentDeviceConfiguration()
+
+    val networkConnection = @Composable {
+        if (!isConnected) {
+            Icon(
+                imageVector = vectorResource(Res.drawable.cloud_off_icon),
+                contentDescription = connectionState.toUiText().asString(),
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.extended.textDisabled
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = connectionState.toUiText().asString(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.extended.textDisabled
+            )
+        }
+    }
+
+    @Composable
+    fun sendOptions(modifier: Modifier = Modifier) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = modifier
+        ) {
+            Spacer(modifier = Modifier.weight(1f))
+            networkConnection()
+            AttachFileOutlinedIcon(
+                enabled = isConnected,
+                onClick = onAttachFilesClick
+            )
+            ChirpButton(
+                text = stringResource(Res.string.send),
+                onClick = onSendClick,
+                enabled = isConnected && isSendButtonEnabled
+            )
+        }
+    }
+
+    @Composable
+    fun attachments(modifier: Modifier = Modifier) {
+        AttachmentsList(
+            images = attachedImages,
+            onRemoveClick = onRemoveAttachmentClick,
+            modifier = modifier
+        )
+    }
+
+    val bottomContent: @Composable RowScope.() -> Unit = {
+        when (deviceConfiguration) {
+            DeviceConfiguration.DESKTOP,
+            DeviceConfiguration.TABLET_PORTRAIT,
+            DeviceConfiguration.TABLET_LANDSCAPE,
+            DeviceConfiguration.MOBILE_LANDSCAPE -> {
+                AnimatedVisibility(
+                    visible = attachedImages.isNotEmpty(),
+                    enter = slideInHorizontally() + fadeIn(),
+                    exit = slideOutHorizontally() + fadeOut()
+                ) {
+                    attachments()
+                }
+                sendOptions(
+                    modifier = Modifier
+                        .align(Alignment.Bottom)
+                )
+            }
+
+            DeviceConfiguration.MOBILE_PORTRAIT -> Column {
+                AnimatedVisibility(visible = attachedImages.isNotEmpty()) {
+                    attachments(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp, top = 8.dp)
+                    )
+                }
+                sendOptions()
+            }
+        }
+    }
+
     ChirpMultiLineTextField(
         state = messageTextFieldState,
         modifier = modifier
@@ -67,7 +154,7 @@ fun MessageBox(
                         && keyEvent.key == Key.Enter
                         && keyEvent.type == KeyEventType.KeyDown
 
-                if(isSendShortcutPressed) {
+                if (isSendShortcutPressed) {
                     onSendClick()
                     true
                 } else false
@@ -77,49 +164,7 @@ fun MessageBox(
             imeAction = ImeAction.Send
         ),
         onKeyboardAction = onSendClick,
-        bottomContent = {
-            Column {
-                AnimatedVisibility(visible = attachedImages.isNotEmpty()) {
-                    AttachmentsList(
-                        images = attachedImages,
-                        onRemoveClick = onRemoveAttachmentClick,
-                        renderingImage = renderingImage,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp, top = 4.dp)
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Spacer(modifier = Modifier.weight(1f))
-                    if (!isConnected) {
-                        Icon(
-                            imageVector = vectorResource(Res.drawable.cloud_off_icon),
-                            contentDescription = connectionState.toUiText().asString(),
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.extended.textDisabled
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = connectionState.toUiText().asString(),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.extended.textDisabled
-                        )
-                    }
-                    AttachFileOutlinedIcon(
-                        enabled = isConnected,
-                        onClick = onAttachFilesClick
-                    )
-                    ChirpButton(
-                        text = stringResource(Res.string.send),
-                        onClick = onSendClick,
-                        enabled = isConnected && isSendButtonEnabled
-                    )
-                }
-            }
-        }
+        bottomContent = bottomContent
     )
 }
 
