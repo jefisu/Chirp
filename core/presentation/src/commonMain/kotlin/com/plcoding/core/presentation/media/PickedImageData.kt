@@ -13,8 +13,15 @@ data class PickedImageData(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
+        if (other == null || this::class != other::class) return false
+
         other as PickedImageData
-        return bytes.contentEquals(other.bytes) && mimeType == other.mimeType
+
+        if (!bytes.contentEquals(other.bytes)) return false
+        if (mimeType != other.mimeType) return false
+        if (name != other.name) return false
+
+        return true
     }
 
     override fun hashCode(): Int {
