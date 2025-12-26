@@ -22,7 +22,8 @@ data class ChatDetailState(
     val isChatOptionsOpen: Boolean = false,
     val isNearBottom: Boolean = false,
     val connectionState: ConnectionState = ConnectionState.DISCONNECTED,
-    val imagesSelected: List<PickedImageData> = emptyList()
+    val imagesSelected: List<PickedImageData> = emptyList(),
+    val previewImage: PickedImageData? = null
 )
 
 data class BannerState(

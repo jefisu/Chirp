@@ -6,17 +6,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import chirp.core.presentation.generated.resources.Res
 import chirp.core.presentation.generated.resources.select_a_image
 import com.plcoding.core.presentation.util.UiText
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import java.awt.FileDialog
 import java.awt.Frame
-import java.io.File
 import java.io.FilenameFilter
-import java.nio.file.Files
 import javax.swing.SwingUtilities
 import kotlin.coroutines.resume
 
@@ -89,16 +84,6 @@ private suspend fun pickImages(
     return files.mapNotNull { it.toPickedImageData() }
 }
 
-fun getMimeTypeFromFileName(fileName: String): String? {
-    val extension = fileName.substringAfterLast(".", "").lowercase()
-    return when (extension) {
-        "png" -> "image/png"
-        "jpg", "jpeg" -> "image/jpeg"
-        "webp" -> "image/webp"
-        else -> null
-    }
-}
-
 private fun createFileDialog(
     fileDialogTitle: String,
     maxItems: Int
@@ -115,27 +100,3 @@ private fun createFileDialog(
         isVisible = true
     }
 }
-
-private suspend fun File.toPickedImageData(): PickedImageData? {
-    return withContext(Dispatchers.IO) {
-        try {
-            val mimeType = getMimeTypeFromFileName(name)
-            val bytes = Files.readAllBytes(toPath())
-            PickedImageData(
-                bytes = bytes,
-                mimeType = mimeType,
-                name = name
-            )
-        } catch (_: Exception) {
-            coroutineContext.ensureActive()
-            null
-        }
-    }
-}
-
-val allowedImageExtensions = listOf(
-    "png",
-    "jpg",
-    "jpeg",
-    "webp",
-)

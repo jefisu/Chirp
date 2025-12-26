@@ -5,6 +5,8 @@ import kotlin.time.Clock
 data class PickedImageData(
     val bytes: ByteArray,
     val mimeType: String?,
+    val height: Int,
+    val width: Int,
     val extension: String? = mimeType?.substringAfter("/"),
     val name: String = "Chirp_image_${Clock.System.now()}.$extension"
 ) {

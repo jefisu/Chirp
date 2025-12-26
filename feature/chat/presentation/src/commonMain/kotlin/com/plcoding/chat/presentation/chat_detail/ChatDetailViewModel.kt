@@ -140,6 +140,8 @@ class ChatDetailViewModel(
             is ChatDetailAction.OnImagesSelected -> updateImagesSelected(action.images)
             is ChatDetailAction.OnRemoveImageSelected -> removeImageSelected(action.image)
             ChatDetailAction.OnDismissErrorDialog -> dismissError()
+            ChatDetailAction.OnDismissImagePreview -> dismissImagePreview()
+            is ChatDetailAction.OnImageClick -> showImagePreview(action.image)
             else -> Unit
         }
     }
@@ -148,6 +150,18 @@ class ChatDetailViewModel(
         when (event) {
             is ChatDetailEvent.OnError -> showError(event.error)
             else -> Unit
+        }
+    }
+
+    private fun showImagePreview(image: PickedImageData) {
+        _state.update {
+            it.copy(previewImage = image)
+        }
+    }
+
+    private fun dismissImagePreview() {
+        _state.update {
+            it.copy(previewImage = null)
         }
     }
 

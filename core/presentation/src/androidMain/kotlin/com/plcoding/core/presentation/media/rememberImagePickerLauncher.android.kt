@@ -69,6 +69,7 @@ private fun <PickerResult> rememberSingleImagePickerLauncher(
         }
 
         scope.launch {
+            val dimensions = parser.getDimensions(contentUri)
             val pickedImage = PickedImageData(
                 bytes = parser.readUri(contentUri) ?: run {
                     mode.consumeResult(
@@ -77,9 +78,11 @@ private fun <PickerResult> rememberSingleImagePickerLauncher(
                     )
                     return@launch
                 },
-                mimeType = parser.getMimeType(contentUri)
-            ).also { image ->
-                parser.getFileName(contentUri)?.let { image.copy(name = it) }
+                mimeType = parser.getMimeType(contentUri),
+                width = dimensions.first,
+                height = dimensions.second
+            ).let { image ->
+                parser.getFileName(contentUri)?.let { image.copy(name = it) } ?: image
             }
 
             mode.consumeResult(
@@ -115,11 +118,14 @@ private fun <PickerResult> rememberMultipleImagesPickerLauncher(
             val pickedImages = contentUris
                 .fastMap { contentUri ->
                     async {
+                        val dimensions = parser.getDimensions(contentUri)
                         PickedImageData(
                             bytes = parser.readUri(contentUri) ?: return@async null,
-                            mimeType = parser.getMimeType(contentUri)
-                        ).also { image ->
-                            parser.getFileName(contentUri)?.let { image.copy(name = it) }
+                            mimeType = parser.getMimeType(contentUri),
+                            width = dimensions.first,
+                            height = dimensions.second
+                        ).let { image ->
+                            parser.getFileName(contentUri)?.let { image.copy(name = it) } ?: image
                         }
                     }
                 }

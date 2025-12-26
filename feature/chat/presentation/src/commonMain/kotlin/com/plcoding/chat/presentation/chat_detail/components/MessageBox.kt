@@ -61,6 +61,7 @@ fun MessageBox(
     onSendClick: () -> Unit,
     onAttachFilesClick: () -> Unit,
     onRemoveAttachmentClick: (PickedImageData) -> Unit,
+    onImageClick: (PickedImageData) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isConnected = connectionState == ConnectionState.CONNECTED
@@ -109,6 +110,7 @@ fun MessageBox(
         AttachmentsList(
             images = attachedImages,
             onRemoveClick = onRemoveAttachmentClick,
+            onImageClick = onImageClick,
             modifier = modifier
         )
     }
@@ -186,6 +188,7 @@ fun MessageBoxPreview() {
                 onSendClick = {},
                 onAttachFilesClick = {},
                 onRemoveAttachmentClick = {},
+                onImageClick = {},
                 modifier = Modifier
                     .fillMaxWidth(),
             )

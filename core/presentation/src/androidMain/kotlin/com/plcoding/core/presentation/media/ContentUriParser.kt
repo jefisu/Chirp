@@ -1,6 +1,7 @@
 package com.plcoding.core.presentation.media
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.MediaStore
 import android.webkit.MimeTypeMap
@@ -40,5 +41,17 @@ class ContentUriParser(
         return if (extension.isNotBlank()) {
             MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
         } else null
+    }
+
+    suspend fun getDimensions(uri: Uri): Pair<Int, Int> {
+        return withContext(Dispatchers.IO) {
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, options)
+            }
+            options.outWidth to options.outHeight
+        }
     }
 }

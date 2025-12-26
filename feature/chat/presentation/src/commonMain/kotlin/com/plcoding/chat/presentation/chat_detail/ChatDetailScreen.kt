@@ -53,6 +53,7 @@ import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
 import com.plcoding.chat.presentation.chat_detail.components.ChatDetailHeader
 import com.plcoding.chat.presentation.chat_detail.components.DateChip
+import com.plcoding.chat.presentation.chat_detail.components.ImagePreviewDialog
 import com.plcoding.chat.presentation.chat_detail.components.MessageBannerListener
 import com.plcoding.chat.presentation.chat_detail.components.MessageBox
 import com.plcoding.chat.presentation.chat_detail.components.MessageList
@@ -62,12 +63,12 @@ import com.plcoding.chat.presentation.components.EmptySection
 import com.plcoding.chat.presentation.model.ChatUi
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.profile.components.DragAndDropOverlay
-import com.plcoding.core.presentation.media.rememberDragAndDropTarget
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
 import com.plcoding.core.designsystem.components.dialogs.ErrorDialog
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
 import com.plcoding.core.presentation.media.ImagePickerMode
+import com.plcoding.core.presentation.media.rememberDragAndDropTarget
 import com.plcoding.core.presentation.media.rememberImagePickerLauncher
 import com.plcoding.core.presentation.util.ObserveAsEvents
 import com.plcoding.core.presentation.util.UiText
@@ -195,6 +196,15 @@ fun ChatDetailScreen(
         DragAndDropOverlay(
             modifier = Modifier.zIndex(1f),
             description = stringResource(Res.string.drop_images_to_share)
+        )
+    }
+
+    if (state.previewImage != null) {
+        ImagePreviewDialog(
+            image = state.previewImage,
+            onDismiss = {
+                onAction(ChatDetailAction.OnDismissImagePreview)
+            }
         )
     }
 
@@ -349,6 +359,9 @@ fun ChatDetailScreen(
                                 onRemoveAttachmentClick = {
                                     onAction(ChatDetailAction.OnRemoveImageSelected(it))
                                 },
+                                onImageClick = {
+                                    onAction(ChatDetailAction.OnImageClick(it))
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .imePadding()
@@ -382,6 +395,9 @@ fun ChatDetailScreen(
                             onAttachFilesClick = imagePickerLauncher::launch,
                             onRemoveAttachmentClick = {
                                 onAction(ChatDetailAction.OnRemoveImageSelected(it))
+                            },
+                            onImageClick = {
+                                onAction(ChatDetailAction.OnImageClick(it))
                             },
                             modifier = Modifier
                                 .fillMaxWidth()

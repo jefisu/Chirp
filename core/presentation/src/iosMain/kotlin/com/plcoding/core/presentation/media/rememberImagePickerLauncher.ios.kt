@@ -8,6 +8,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import com.plcoding.core.presentation.util.UiText
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.refTo
+import kotlinx.cinterop.useContents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -18,6 +19,7 @@ import platform.PhotosUI.PHPickerResult
 import platform.PhotosUI.PHPickerViewController
 import platform.PhotosUI.PHPickerViewControllerDelegateProtocol
 import platform.UIKit.UIApplication
+import platform.UIKit.UIImage
 import platform.UniformTypeIdentifiers.UTType
 import platform.darwin.NSObject
 import platform.darwin.dispatch_get_main_queue
@@ -75,11 +77,17 @@ actual fun <PickerResult> rememberImagePickerLauncher(
                             withContext(Dispatchers.Default) {
                                 memcpy(bytes.refTo(0), nsData.bytes, nsData.length)
                             }
+                            
+                            val uiImage = UIImage(data = nsData)
+                            val width = uiImage.size.useContents { width }.toInt()
+                            val height = uiImage.size.useContents { height }.toInt()
 
                             imageDataList.add(
                                 PickedImageData(
                                     bytes = bytes,
-                                    mimeType = mimeType
+                                    mimeType = mimeType,
+                                    width = width,
+                                    height = height
                                 ).also { image ->
                                     itemProvider.suggestedName?.let { image.copy(name = it) }
                                 }

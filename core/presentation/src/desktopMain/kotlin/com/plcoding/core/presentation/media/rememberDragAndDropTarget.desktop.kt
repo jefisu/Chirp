@@ -52,20 +52,15 @@ actual fun <DropResult> rememberDragAndDropTarget(
                     val pickedImages = fileList
                         .map {
                             async {
-                                val file = it as File
-                                val mimeType = getMimeTypeFromFileName(file.name)
-                                PickedImageData(
-                                    bytes = file.readBytes(),
-                                    mimeType = mimeType,
-                                    name = file.name
-                                )
+                                (it as File).toPickedImageData()
                             }
                         }
                         .awaitAll()
+                        .filterNotNull()
 
                     @Suppress("UNCHECKED_CAST")
                     val result = when (mode) {
-                        ImagePickerMode.Single -> pickedImages.first()
+                        ImagePickerMode.Single -> pickedImages.firstOrNull()
                         is ImagePickerMode.Multiple -> pickedImages.take(mode.maxItems)
                     } as DropResult
 

@@ -22,5 +22,7 @@ sealed interface ChatDetailAction {
     data class OnTopVisibleIndexChanged(val topVisibleIndex: Int): ChatDetailAction
     data class OnImagesSelected(val images: List<PickedImageData>): ChatDetailAction
     data class OnRemoveImageSelected(val image: PickedImageData): ChatDetailAction
+    data class OnImageClick(val image: PickedImageData): ChatDetailAction
+    data object OnDismissImagePreview: ChatDetailAction
     data object OnDismissErrorDialog: ChatDetailAction
 }

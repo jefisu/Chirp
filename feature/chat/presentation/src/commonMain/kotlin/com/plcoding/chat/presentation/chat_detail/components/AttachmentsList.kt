@@ -23,6 +23,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 fun AttachmentsList(
     images: List<PickedImageData>,
     onRemoveClick: (PickedImageData) -> Unit,
+    onImageClick: (PickedImageData) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val deviceConfiguration = currentDeviceConfiguration()
@@ -39,6 +40,7 @@ fun AttachmentsList(
             image = imageData,
             isRendered = true,
             onRemoveClick = { onRemoveClick(imageData) },
+            onImageClick = { onImageClick(imageData) },
             modifier = modifier
         )
     }
@@ -82,14 +84,17 @@ private fun Preview() {
         PickedImageData(
             name = "Attachment",
             bytes = byteArrayOf(),
-            mimeType = "image/jpeg"
+            mimeType = "image/jpeg",
+            height = 0,
+            width = 0,
         )
     }
 
     val content = @Composable {
         AttachmentsList(
             images = files,
-            onRemoveClick = {}
+            onRemoveClick = {},
+            onImageClick = {}
         )
     }
 

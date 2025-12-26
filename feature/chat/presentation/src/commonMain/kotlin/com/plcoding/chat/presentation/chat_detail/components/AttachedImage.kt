@@ -4,6 +4,7 @@ package com.plcoding.chat.presentation.chat_detail.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,17 +54,23 @@ fun AttachedImage(
     onRemoveClick: () -> Unit,
     modifier: Modifier = Modifier,
     isRendered: Boolean = true,
-    renderingProgress: (() -> Float)? = null
+    renderingProgress: (() -> Float)? = null,
+    onImageClick: () -> Unit = {}
 ) {
     val previewModifier = if (LocalInspectionMode.current) {
         Modifier.background(Color.Red)
     } else Modifier
 
-    val closeIcon = @Composable {
+    @Composable
+    fun closeIcon(
+        modifier: Modifier = Modifier,
+        color: Color = MaterialTheme.colorScheme.extended.destructiveSecondaryOutline
+    ) {
         Icon(
             imageVector = Icons.Rounded.Close,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.extended.destructiveSecondaryOutline
+            tint = color,
+            modifier = modifier
         )
     }
 
@@ -76,7 +83,10 @@ fun AttachedImage(
                 modifier = modifier
                     .sizeIn(minWidth = 52.dp, minHeight = 52.dp)
                     .clip(MaterialTheme.shapes.medium)
-                    .then(previewModifier),
+                    .then(previewModifier)
+                    .clickable {
+                        onImageClick()
+                    },
                 loading = {
                     CircularProgressIndicator(
                         modifier = Modifier.scale(0.7f)
@@ -93,7 +103,7 @@ fun AttachedImage(
                     .size(20.dp)
                     .align(Alignment.TopEnd)
                     .offset((-4).dp, 4.dp),
-                content = closeIcon
+                content = { closeIcon() }
             )
         }
     }
@@ -130,7 +140,7 @@ fun AttachedImage(
             )
             IconButton(
                 onClick = onRemoveClick,
-                content = closeIcon
+                content = { closeIcon() }
             )
         }
     }
@@ -141,7 +151,6 @@ fun AttachedImage(
         renderingImage()
     }
 }
-
 @Preview
 @Composable
 private fun Preview(
@@ -153,7 +162,9 @@ private fun Preview(
             image = PickedImageData(
                 name = "Latest design screenshot",
                 bytes = byteArrayOf(),
-                mimeType = "image/jpg"
+                mimeType = "image/jpg",
+                height = 0,
+                width = 0,
             ),
             isRendered = isRendered,
             onRemoveClick = {},
