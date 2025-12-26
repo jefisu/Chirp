@@ -13,7 +13,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,12 +29,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import coil3.compose.AsyncImage
 import com.plcoding.core.designsystem.theme.ChirpBase0
 import com.plcoding.core.designsystem.theme.ChirpBase900
 import com.plcoding.core.presentation.media.PickedImageData
 import com.plcoding.core.presentation.util.DeviceConfiguration
 import com.plcoding.core.presentation.util.currentDeviceConfiguration
+import net.engawapg.lib.zoomable.rememberZoomState
+import net.engawapg.lib.zoomable.zoomable
 
 @Composable
 fun ImagePreviewDialog(
@@ -38,6 +47,13 @@ fun ImagePreviewDialog(
     modifier: Modifier = Modifier
 ) {
     val deviceConfiguration = currentDeviceConfiguration()
+
+    var zoomScale by rememberSaveable { mutableStateOf(1f) }
+    val zoomState = rememberZoomState(initialScale = zoomScale)
+
+    LifecycleEventEffect(event = Lifecycle.Event.ON_STOP) {
+        zoomScale = zoomState.scale
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -87,6 +103,7 @@ fun ImagePreviewDialog(
                         drawContent()
                         drawRect(color = Color.Black.copy(alpha = 0.2f))
                     }
+                    .zoomable(zoomState)
             )
             Icon(
                 imageVector = Icons.Rounded.Close,
@@ -103,6 +120,19 @@ fun ImagePreviewDialog(
                     }
                     .scale(0.6f)
             )
+            if (zoomState.scale > 1.0f) {
+                Text(
+                    text = "${(zoomState.scale * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = ChirpBase900,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(iconPadding)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(ChirpBase0)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
         }
     }
 }
