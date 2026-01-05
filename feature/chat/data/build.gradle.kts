@@ -30,10 +30,12 @@ kotlin {
             dependencies {
                 implementation(libs.koin.android)
                 implementation(libs.androidx.lifecycle.process)
+                implementation(libs.androidx.work.runtime.ktx)
 
                 implementation(project.dependencies.platform(libs.firebase.bom))
                 implementation(libs.firebase.messaging)
                 implementation(libs.koin.android)
+                implementation(libs.koin.androidx.workmanager)
             }
         }
 

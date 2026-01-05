@@ -4,7 +4,6 @@ data class File(
     val name: String,
     val mimeType: String?,
     val bytes: ByteArray,
-    val path: String? = null
 ) {
 
     override fun equals(other: Any?): Boolean {
@@ -15,7 +14,6 @@ data class File(
         if (name != other.name) return false
         if (mimeType != other.mimeType) return false
         if (!bytes.contentEquals(other.bytes)) return false
-        if (path != other.path) return false
 
         return true
     }
@@ -24,7 +22,6 @@ data class File(
         var result = name.hashCode()
         result = 31 * result + (mimeType?.hashCode() ?: 0)
         result = 31 * result + bytes.contentHashCode()
-        result = 31 * result + (path?.hashCode() ?: 0)
         return result
     }
 }

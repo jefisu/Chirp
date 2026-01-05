@@ -23,7 +23,7 @@ data class ChatDetailState(
     val isNearBottom: Boolean = false,
     val connectionState: ConnectionState = ConnectionState.DISCONNECTED,
     val imagesSelected: List<PickedImageData> = emptyList(),
-    val previewImage: PickedImageData? = null
+    val attachmentPreviewData: Any? = null,
 )
 
 data class BannerState(

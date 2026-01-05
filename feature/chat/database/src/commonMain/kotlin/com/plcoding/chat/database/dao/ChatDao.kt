@@ -106,7 +106,7 @@ interface ChatDao {
 
         val serverChatIds = chats.map { it.chat.chatId }
         val localChatIds = getAllChatIds()
-        val staleChatIds = localChatIds - serverChatIds
+        val staleChatIds = localChatIds - serverChatIds.toSet()
 
         chats.forEach { chat ->
             chat.lastMessage?.run {
@@ -117,7 +117,7 @@ interface ChatDao {
                         senderId = senderId,
                         content = content,
                         timestamp = timestamp,
-                        deliveryStatus = deliveryStatus
+                        deliveryStatus = deliveryStatus,
                     )
                 )
             }

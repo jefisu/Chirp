@@ -1,7 +1,7 @@
 package com.plcoding.chat.data.message
 
 import com.plcoding.chat.data.dto.ChatMessageDto
-import com.plcoding.chat.data.mappers.toDomain
+import com.plcoding.chat.data.mappers.toChatMessage
 import com.plcoding.chat.domain.message.ChatMessageService
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.core.data.networking.delete
@@ -34,6 +34,6 @@ class KtorChatMessageService(
                     this["before"] = before
                 }
             }
-        ).map { it.map { it.toDomain() } }
+        ).map { it.map { it.toChatMessage() } }
     }
 }

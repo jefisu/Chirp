@@ -3,9 +3,8 @@ package com.plcoding.chat.data.mappers
 import com.plcoding.chat.data.dto.ChatParticipantDto
 import com.plcoding.chat.database.entities.ChatParticipantEntity
 import com.plcoding.chat.domain.models.ChatParticipant
-import com.plcoding.core.domain.auth.User
 
-fun ChatParticipantDto.toDomain(): ChatParticipant {
+fun ChatParticipantDto.toChatParticipant(): ChatParticipant {
     return ChatParticipant(
         userId = userId,
         username = username,
@@ -13,7 +12,7 @@ fun ChatParticipantDto.toDomain(): ChatParticipant {
     )
 }
 
-fun ChatParticipantEntity.toDomain(): ChatParticipant {
+fun ChatParticipantEntity.toChatParticipant(): ChatParticipant {
     return ChatParticipant(
         userId = userId,
         username = username,
@@ -21,7 +20,7 @@ fun ChatParticipantEntity.toDomain(): ChatParticipant {
     )
 }
 
-fun ChatParticipant.toEntity(): ChatParticipantEntity {
+fun ChatParticipant.toChatParticipantEntity(): ChatParticipantEntity {
     return ChatParticipantEntity(
         userId = userId,
         username = username,

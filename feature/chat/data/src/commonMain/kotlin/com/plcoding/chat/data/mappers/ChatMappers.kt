@@ -10,25 +10,26 @@ import com.plcoding.chat.domain.models.ChatInfo
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
 import com.plcoding.chat.domain.models.ChatParticipant
+import com.plcoding.chat.domain.models.MessageAttachment
 import kotlin.time.Instant
 
 typealias DataMessageWithSender = MessageWithSender
 typealias DomainMessageWithSender = com.plcoding.chat.domain.models.MessageWithSender
 
-fun ChatDto.toDomain(): Chat {
+fun ChatDto.toChat(): Chat {
     val lastMessageSenderUsername = lastMessage?.let { message ->
         participants.find { it.userId == message.senderId }?.username
     }
     return Chat(
         id = id,
-        participants = participants.map { it.toDomain() },
+        participants = participants.map { it.toChatParticipant() },
         lastActivityAt = Instant.parse(lastActivityAt),
-        lastMessage = lastMessage?.toDomain(),
+        lastMessage = lastMessage?.toChatMessage(),
         lastMessageSenderUsername = lastMessageSenderUsername
     )
 }
 
-fun ChatEntity.toDomain(
+fun ChatEntity.toChat(
     participants: List<ChatParticipant>,
     lastMessage: ChatMessage? = null
 ): Chat {
@@ -44,36 +45,38 @@ fun ChatEntity.toDomain(
     )
 }
 
-fun ChatWithParticipants.toDomain(): Chat {
+fun ChatWithParticipants.toChat(
+    attachments: List<MessageAttachment>,
+): Chat {
     return Chat(
         id = chat.chatId,
-        participants = participants.map { it.toDomain() },
+        participants = participants.map { it.toChatParticipant() },
         lastActivityAt = Instant.fromEpochMilliseconds(chat.lastActivityAt),
-        lastMessage = lastMessage?.toDomain(),
+        lastMessage = lastMessage?.toChatMessage(attachments),
         lastMessageSenderUsername = lastMessage?.senderUsername
     )
 }
 
-fun Chat.toEntity(): ChatEntity {
+fun Chat.toChatEntity(): ChatEntity {
     return ChatEntity(
         chatId = id,
         lastActivityAt = lastActivityAt.toEpochMilliseconds()
     )
 }
 
-fun DataMessageWithSender.toDomain(): DomainMessageWithSender {
+fun DataMessageWithSender.toMessageWithSender(): DomainMessageWithSender {
     return DomainMessageWithSender(
-        message = message.toDomain(),
-        sender = sender.toDomain(),
+        message = message.toChatMessage(attachments = attachments.map { it.toMessageAttachment() }),
+        sender = sender.toChatParticipant(),
         deliveryStatus = ChatMessageDeliveryStatus.valueOf(this.message.deliveryStatus)
     )
 }
 
-fun ChatInfoEntity.toDomain(): ChatInfo {
+fun ChatInfoEntity.toChatInfo(): ChatInfo {
     return ChatInfo(
-        chat = chat.toDomain(
-            participants = this.participants.map { it.toDomain() }
+        chat = chat.toChat(
+            participants = this.participants.map { it.toChatParticipant() }
         ),
-        messages = messagesWithSenders.map { it.toDomain() }
+        messages = messagesWithSenders.map { it.toMessageWithSender() }
     )
 }

@@ -4,47 +4,64 @@ import com.plcoding.chat.data.dto.ChatMessageDto
 import com.plcoding.chat.data.dto.websocket.IncomingWebSocketDto
 import com.plcoding.chat.data.dto.websocket.OutgoingWebSocketDto
 import com.plcoding.chat.database.entities.ChatMessageEntity
+import com.plcoding.chat.database.entities.MessageWithSender
 import com.plcoding.chat.database.view.LastMessageView
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
-import com.plcoding.chat.domain.models.OutgoingNewMessage
+import com.plcoding.chat.domain.models.MessageAttachment
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-fun ChatMessageDto.toDomain(): ChatMessage {
+
+fun ChatMessageDto.toChatMessage(): ChatMessage {
     return ChatMessage(
         id = id,
         chatId = chatId,
         content = content,
+        attachments = attachments.map { it.toMessageAttachment() },
         createdAt = Instant.parse(createdAt),
         senderId = senderId,
         deliveryStatus = ChatMessageDeliveryStatus.SENT
     )
 }
 
-fun ChatMessageEntity.toDomain(): ChatMessage {
+fun MessageWithSender.toChatMessage(): ChatMessage {
+    return message
+        .toChatMessage(
+            attachments = attachments.map { it.toMessageAttachment() }
+        )
+}
+
+fun ChatMessageEntity.toChatMessage(
+    attachments: List<MessageAttachment>,
+): ChatMessage {
     return ChatMessage(
         id = messageId,
         chatId = chatId,
         content = content,
+        attachments = attachments,
         createdAt = Instant.fromEpochMilliseconds(timestamp),
         senderId = senderId,
         deliveryStatus = ChatMessageDeliveryStatus.valueOf(deliveryStatus)
     )
 }
 
-fun LastMessageView.toDomain(): ChatMessage {
+
+fun LastMessageView.toChatMessage(
+    attachments: List<MessageAttachment>,
+): ChatMessage {
     return ChatMessage(
         id = messageId,
         chatId = chatId,
         content = content,
+        attachments = attachments,
         createdAt = Instant.fromEpochMilliseconds(timestamp),
         senderId = senderId,
         deliveryStatus = ChatMessageDeliveryStatus.valueOf(this.deliveryStatus),
     )
 }
 
-fun ChatMessage.toEntity(): ChatMessageEntity {
+fun ChatMessage.toChatMessageEntity(): ChatMessageEntity {
     return ChatMessageEntity(
         messageId = id,
         chatId = chatId,
@@ -72,10 +89,11 @@ fun ChatMessage.toNewMessage(): OutgoingWebSocketDto.NewMessage {
         messageId = id,
         chatId = chatId,
         content = content,
+        attachments = attachments.map { it.toMessageAttachmentDto() }
     )
 }
 
-fun IncomingWebSocketDto.NewMessageDto.toEntity(): ChatMessageEntity {
+fun IncomingWebSocketDto.NewMessageDto.toChatMessageEntity(): ChatMessageEntity {
     return ChatMessageEntity(
         messageId = id,
         chatId = chatId,
@@ -86,22 +104,14 @@ fun IncomingWebSocketDto.NewMessageDto.toEntity(): ChatMessageEntity {
     )
 }
 
-fun OutgoingNewMessage.toWebSocketDto(): OutgoingWebSocketDto.NewMessage {
-    return OutgoingWebSocketDto.NewMessage(
-        chatId = chatId,
-        messageId = messageId,
-        content = content
-    )
-}
-
-fun OutgoingWebSocketDto.NewMessage.toEntity(
+fun OutgoingWebSocketDto.NewMessage.toChatMessageEntity(
     senderId: String,
     deliveryStatus: ChatMessageDeliveryStatus
 ): ChatMessageEntity {
     return ChatMessageEntity(
         messageId = messageId,
         chatId = chatId,
-        content = content,
+        content = content.toString(),
         senderId = senderId,
         deliveryStatus = deliveryStatus.name,
         timestamp = Clock.System.now().toEpochMilliseconds()

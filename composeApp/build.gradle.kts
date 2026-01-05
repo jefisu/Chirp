@@ -16,6 +16,7 @@ kotlin {
             implementation(libs.core.splashscreen)
 
             implementation(libs.koin.android)
+            implementation(libs.koin.androidx.workmanager)
         }
         commonMain.dependencies {
             implementation(projects.core.data)

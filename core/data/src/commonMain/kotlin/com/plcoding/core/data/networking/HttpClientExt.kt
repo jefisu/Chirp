@@ -8,6 +8,7 @@ import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
@@ -84,6 +85,22 @@ suspend inline fun <reified Request, reified Response: Any> HttpClient.put(
             }
             setBody(body)
             builder()
+        }
+    }
+}
+
+suspend fun HttpClient.uploadToUrl(
+    url: String,
+    body: ByteArray,
+    headers: Map<String, String>
+): Result<Unit, DataError.Remote> {
+    return safeCall {
+        put {
+            url(url)
+            headers.forEach { (key, value) ->
+                header(key, value)
+            }
+            setBody(body)
         }
     }
 }

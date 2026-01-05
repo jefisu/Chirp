@@ -49,6 +49,7 @@ import chirp.feature.chat.presentation.generated.resources.Res
 import chirp.feature.chat.presentation.generated.resources.drop_images_to_share
 import chirp.feature.chat.presentation.generated.resources.no_chat_selected
 import chirp.feature.chat.presentation.generated.resources.select_a_chat
+import coil3.compose.rememberAsyncImagePainter
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
 import com.plcoding.chat.presentation.chat_detail.components.ChatDetailHeader
@@ -64,6 +65,9 @@ import com.plcoding.chat.presentation.model.ChatUi
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.profile.components.DragAndDropOverlay
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
+import com.plcoding.core.designsystem.components.chat.MessageAttachmentTypeUi
+import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
+import com.plcoding.core.designsystem.components.chat.MessageAttachmentUploadStatusUi
 import com.plcoding.core.designsystem.components.dialogs.ErrorDialog
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
@@ -199,9 +203,9 @@ fun ChatDetailScreen(
         )
     }
 
-    if (state.previewImage != null) {
+    if (state.attachmentPreviewData != null) {
         ImagePreviewDialog(
-            image = state.previewImage,
+            painter = rememberAsyncImagePainter(state.attachmentPreviewData),
             onDismiss = {
                 onAction(ChatDetailAction.OnDismissImagePreview)
             }
@@ -339,6 +343,9 @@ fun ChatDetailScreen(
                             onRetryPaginationClick = {
                                 onAction(ChatDetailAction.OnRetryPaginationClick)
                             },
+                            onAttachmentClick = { attachment ->
+                                onAction(ChatDetailAction.OnAttachmentClick(attachment.url))
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
@@ -360,7 +367,7 @@ fun ChatDetailScreen(
                                     onAction(ChatDetailAction.OnRemoveImageSelected(it))
                                 },
                                 onImageClick = {
-                                    onAction(ChatDetailAction.OnImageClick(it))
+                                    onAction(ChatDetailAction.OnAttachmentClick(it.bytes))
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -397,7 +404,7 @@ fun ChatDetailScreen(
                                 onAction(ChatDetailAction.OnRemoveImageSelected(it))
                             },
                             onImageClick = {
-                                onAction(ChatDetailAction.OnImageClick(it))
+                                onAction(ChatDetailAction.OnAttachmentClick(it.bytes))
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -474,6 +481,15 @@ private fun ChatDetailEmptyPreview() {
 @Preview
 @Composable
 private fun ChatDetailMessagesPreview() {
+    val attachments = ('a'..'f').map {
+        MessageAttachmentUi(
+            id = it.toString(),
+            url = it.toString(),
+            type = MessageAttachmentTypeUi.IMAGE,
+            status = MessageAttachmentUploadStatusUi.PENDING
+        )
+    }
+
     ChirpTheme(darkTheme = true) {
         ChatDetailScreen(
             messageListState = rememberLazyListState(),
@@ -508,7 +524,8 @@ private fun ChatDetailMessagesPreview() {
                                 "and goes over multiple lines to showcase the ellipsis",
                         createdAt = Clock.System.now(),
                         senderId = "1",
-                        deliveryStatus = ChatMessageDeliveryStatus.SENT
+                        deliveryStatus = ChatMessageDeliveryStatus.SENT,
+                        attachments = emptyList(),
                     ),
                     lastMessageSenderUsername = "Philipp"
                 ),
@@ -518,7 +535,8 @@ private fun ChatDetailMessagesPreview() {
                             id = Uuid.random().toString(),
                             content = "Hello world!",
                             deliveryStatus = ChatMessageDeliveryStatus.SENT,
-                            formattedSentTime = UiText.DynamicString("Friday, Aug 20")
+                            formattedSentTime = UiText.DynamicString("Friday, Aug 20"),
+                            attachments = if (it == 2) attachments else emptyList(),
                         )
                     } else {
                         MessageUi.OtherUserMessage(
@@ -530,6 +548,7 @@ private fun ChatDetailMessagesPreview() {
                                 initials = "JO"
                             ),
                             formattedSentTime = UiText.DynamicString("Friday, Aug 20"),
+                            attachments = emptyList(),
                         )
                     }
                 }

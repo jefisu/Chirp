@@ -21,6 +21,9 @@ kotlin {
 
                 implementation(compose.components.resources)
                 implementation(compose.components.uiToolingPreview)
+                implementation(compose.materialIconsExtended)
+                implementation(compose.runtime)
+                implementation(libs.jetbrains.lifecycle.compose)
             }
         }
 

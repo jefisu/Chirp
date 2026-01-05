@@ -11,6 +11,7 @@ import com.plcoding.chat.presentation.navigation.ChatGraphRoutes
 import com.plcoding.chirp.navigation.DeepLinkListener
 import com.plcoding.chirp.navigation.NavigationRoot
 import com.plcoding.core.designsystem.theme.ChirpTheme
+import com.plcoding.core.presentation.util.ImageLoaderFactory
 import com.plcoding.core.presentation.util.ObserveAsEvents
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
@@ -43,6 +44,8 @@ fun App(
             }
         }
     }
+
+    ImageLoaderFactory()
 
     ChirpTheme(
         darkTheme = isDarkTheme

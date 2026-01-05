@@ -10,5 +10,10 @@ data class MessageWithSender(
         parentColumn = "senderId",
         entityColumn = "userId"
     )
-    val sender: ChatParticipantEntity
+    val sender: ChatParticipantEntity,
+    @Relation(
+        parentColumn = "messageId",
+        entityColumn = "messageId"
+    )
+    val attachments: List<MessageAttachmentEntity>
 )

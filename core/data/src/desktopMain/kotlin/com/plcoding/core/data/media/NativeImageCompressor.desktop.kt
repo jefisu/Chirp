@@ -20,7 +20,9 @@ actual class NativeImageCompressor : ImageCompressor {
     ): ByteArray? = withContext(Dispatchers.Default) {
         try {
             val inputStream = ByteArrayInputStream(file.bytes)
-            val image = ImageIO.read(inputStream) ?: return@withContext null
+
+            // Return original bytes if ImageIO cannot read the format (e.g. WebP), otherwise return null on failure.
+            val image = ImageIO.read(inputStream) ?: return@withContext file.bytes
 
             val format = when (file.mimeType) {
                 "image/png" -> "png"
@@ -37,11 +39,11 @@ actual class NativeImageCompressor : ImageCompressor {
 
             var currentQuality = quality
             var outputBytes: ByteArray
-            
+
             val writers = ImageIO.getImageWritersByFormatName(format)
             val writer = if (writers.hasNext()) writers.next() else {
-                 val jpgWriters = ImageIO.getImageWritersByFormatName("jpg")
-                 if (jpgWriters.hasNext()) jpgWriters.next() else return@withContext null
+                val jpgWriters = ImageIO.getImageWritersByFormatName("jpg")
+                if (jpgWriters.hasNext()) jpgWriters.next() else return@withContext null
             }
 
             try {
@@ -62,7 +64,7 @@ actual class NativeImageCompressor : ImageCompressor {
 
                     writer.write(null, IIOImage(image, null, null), param)
                     imageOutputStream.close()
-                    
+
                     outputBytes = outputStream.toByteArray()
                     currentQuality -= (currentQuality * 0.1).roundToInt()
                 } while (
@@ -73,7 +75,7 @@ actual class NativeImageCompressor : ImageCompressor {
             } finally {
                 writer.dispose()
             }
-            
+
             outputBytes
         } catch (e: Exception) {
             e.printStackTrace()

@@ -2,6 +2,7 @@ package com.plcoding.core.presentation.util
 
 import chirp.core.presentation.generated.resources.Res
 import chirp.core.presentation.generated.resources.error_bad_request
+import chirp.core.presentation.generated.resources.error_compression_failed
 import chirp.core.presentation.generated.resources.error_conflict
 import chirp.core.presentation.generated.resources.error_disk_full
 import chirp.core.presentation.generated.resources.error_forbidden
@@ -23,6 +24,7 @@ fun DataError.toUiText(): UiText {
         DataError.Local.DISK_FULL -> Res.string.error_disk_full
         DataError.Local.NOT_FOUND -> Res.string.error_not_found
         DataError.Local.UNKNOWN -> Res.string.error_unknown
+        DataError.Local.COMPRESSION_FAILED -> Res.string.error_compression_failed
         DataError.Remote.BAD_REQUEST -> Res.string.error_bad_request
         DataError.Remote.REQUEST_TIMEOUT -> Res.string.error_request_timeout
         DataError.Remote.UNAUTHORIZED -> Res.string.error_unauthorized

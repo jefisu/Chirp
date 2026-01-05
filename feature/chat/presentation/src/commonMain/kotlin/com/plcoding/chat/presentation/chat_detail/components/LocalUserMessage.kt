@@ -21,6 +21,7 @@ import chirp.feature.chat.presentation.generated.resources.you
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.core.designsystem.components.chat.ChirpChatBubble
+import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import com.plcoding.core.designsystem.components.chat.TrianglePosition
 import com.plcoding.core.designsystem.components.dropdown.ChirpDropDownMenu
 import com.plcoding.core.designsystem.components.dropdown.DropDownItem
@@ -36,6 +37,7 @@ fun LocalUserMessage(
     onDismissMessageMenu: () -> Unit,
     onDeleteClick: () -> Unit,
     onRetryClick: () -> Unit,
+    onAttachmentClick: (MessageAttachmentUi) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -50,6 +52,7 @@ fun LocalUserMessage(
                 sender = stringResource(Res.string.you),
                 formattedDateTime = message.formattedSentTime.asString(),
                 trianglePosition = TrianglePosition.RIGHT,
+                attachments = message.attachments,
                 messageStatus = {
                     MessageStatus(
                         status = message.deliveryStatus
@@ -57,7 +60,8 @@ fun LocalUserMessage(
                 },
                 onLongClick = {
                     onMessageLongClick()
-                }
+                },
+                onAttachmentClick = onAttachmentClick,
             )
 
             ChirpDropDownMenu(
@@ -74,7 +78,7 @@ fun LocalUserMessage(
             )
         }
 
-        if(message.deliveryStatus == ChatMessageDeliveryStatus.FAILED) {
+        if (message.deliveryStatus == ChatMessageDeliveryStatus.FAILED) {
             IconButton(
                 onClick = onRetryClick
             ) {

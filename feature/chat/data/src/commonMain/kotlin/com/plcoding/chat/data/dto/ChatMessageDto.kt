@@ -1,12 +1,15 @@
 package com.plcoding.chat.data.dto
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class ChatMessageDto(
     val id: String,
     val chatId: String,
-    val content: String,
+    val content: String?,
     val createdAt: String,
-    val senderId: String
+    val senderId: String,
+    @SerialName("attachedFiles")
+    val attachments: List<MessageAttachmentDto>
 )

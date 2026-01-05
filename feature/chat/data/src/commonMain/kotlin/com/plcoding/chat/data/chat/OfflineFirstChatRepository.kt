@@ -1,8 +1,12 @@
 package com.plcoding.chat.data.chat
 
-import com.plcoding.chat.data.mappers.toDomain
-import com.plcoding.chat.data.mappers.toEntity
+import com.plcoding.chat.data.mappers.toChat
+import com.plcoding.chat.data.mappers.toChatEntity
+import com.plcoding.chat.data.mappers.toChatInfo
+import com.plcoding.chat.data.mappers.toChatParticipant
+import com.plcoding.chat.data.mappers.toChatParticipantEntity
 import com.plcoding.chat.data.mappers.toLastMessageView
+import com.plcoding.chat.data.mappers.toMessageAttachment
 import com.plcoding.chat.database.ChirpChatDatabase
 import com.plcoding.chat.database.entities.ChatInfoEntity
 import com.plcoding.chat.database.entities.ChatParticipantEntity
@@ -28,7 +32,7 @@ import kotlinx.coroutines.supervisorScope
 class OfflineFirstChatRepository(
     private val chatService: ChatService,
     private val db: ChirpChatDatabase,
-): ChatRepository {
+) : ChatRepository {
 
     override fun getChats(): Flow<List<Chat>> {
         return db.chatDao.getChatsWithParticipants()
@@ -37,17 +41,24 @@ class OfflineFirstChatRepository(
                     allChatsWithParticipants
                         .map { chatWithParticipants ->
                             async {
-                                ChatWithParticipants(
-                                    chat = chatWithParticipants.chat,
-                                    participants = chatWithParticipants
-                                        .participants
-                                        .onlyActive(chatWithParticipants.chat.chatId),
-                                    lastMessage = chatWithParticipants.lastMessage
-                                )
+                                val activeParticipants = chatWithParticipants
+                                    .participants
+                                    .onlyActive(chatWithParticipants.chat.chatId)
+                                    .map { it.toChatParticipant() }
+
+                                val attachmentsOfLastMessage = chatWithParticipants
+                                    .lastMessage
+                                    ?.messageId
+                                    ?.let { db.messageAttachmentDao.getAttachmentsByMessageId(it) }
+                                    ?.map { it.toMessageAttachment() }
+                                    .orEmpty()
+
+                                chatWithParticipants
+                                    .toChat(attachments = attachmentsOfLastMessage)
+                                    .copy(participants = activeParticipants)
                             }
                         }
                         .awaitAll()
-                        .map { it.toDomain() }
                 }
             }
     }
@@ -64,13 +75,13 @@ class OfflineFirstChatRepository(
                     messagesWithSenders = chatInfo.messagesWithSenders
                 )
             }
-            .map { it.toDomain() }
+            .map { it.toChatInfo() }
     }
 
     override fun getActiveParticipantsByChatId(chatId: String): Flow<List<ChatParticipant>> {
         return db.chatDao.getActiveParticipantsByChatId(chatId)
             .map { participants ->
-                participants.map { it.toDomain() }
+                participants.map { it.toChatParticipant() }
             }
     }
 
@@ -80,8 +91,8 @@ class OfflineFirstChatRepository(
             .onSuccess { chats ->
                 val chatsWithParticipants = chats.map { chat ->
                     ChatWithParticipants(
-                        chat = chat.toEntity(),
-                        participants = chat.participants.map { it.toEntity() },
+                        chat = chat.toChatEntity(),
+                        participants = chat.participants.map { it.toChatParticipantEntity() },
                         lastMessage = chat.lastMessage?.toLastMessageView()
                     )
                 }
@@ -100,8 +111,8 @@ class OfflineFirstChatRepository(
             .getChatById(chatId)
             .onSuccess { chat ->
                 db.chatDao.upsertChatWithParticipantsAndCrossRefs(
-                    chat = chat.toEntity(),
-                    participants = chat.participants.map { it.toEntity() },
+                    chat = chat.toChatEntity(),
+                    participants = chat.participants.map { it.toChatParticipantEntity() },
                     participantDao = db.chatParticipantDao,
                     crossRefDao = db.chatParticipantsCrossRefDao
                 )
@@ -114,8 +125,8 @@ class OfflineFirstChatRepository(
             .createChat(otherUserIds)
             .onSuccess { chat ->
                 db.chatDao.upsertChatWithParticipantsAndCrossRefs(
-                    chat = chat.toEntity(),
-                    participants = chat.participants.map { it.toEntity() },
+                    chat = chat.toChatEntity(),
+                    participants = chat.participants.map { it.toChatParticipantEntity() },
                     participantDao = db.chatParticipantDao,
                     crossRefDao = db.chatParticipantsCrossRefDao
                 )
@@ -138,8 +149,8 @@ class OfflineFirstChatRepository(
             .addParticipantsToChat(chatId, userIds)
             .onSuccess { chat ->
                 db.chatDao.upsertChatWithParticipantsAndCrossRefs(
-                    chat = chat.toEntity(),
-                    participants = chat.participants.map { it.toEntity() },
+                    chat = chat.toChatEntity(),
+                    participants = chat.participants.map { it.toChatParticipantEntity() },
                     participantDao = db.chatParticipantDao,
                     crossRefDao = db.chatParticipantsCrossRefDao
                 )

@@ -108,10 +108,10 @@ fun MessageBox(
     @Composable
     fun attachments(modifier: Modifier = Modifier) {
         AttachmentsList(
-            images = attachedImages,
+            pickedImages = attachedImages,
             onRemoveClick = onRemoveAttachmentClick,
             onImageClick = onImageClick,
-            modifier = modifier
+            modifier = modifier,
         )
     }
 
@@ -138,7 +138,6 @@ fun MessageBox(
                 AnimatedVisibility(visible = attachedImages.isNotEmpty()) {
                     attachments(
                         modifier = Modifier
-                            .fillMaxWidth()
                             .padding(bottom = 12.dp, top = 8.dp)
                     )
                 }

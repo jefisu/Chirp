@@ -27,9 +27,12 @@ internal fun Project.configureKotlinMultiplatform() {
         applyHierarchyTemplate()
 
         compilerOptions {
-            freeCompilerArgs.add("-Xexpect-actual-classes")
-            freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
-            freeCompilerArgs.add("-opt-in=kotlin.time.ExperimentalTime")
+            freeCompilerArgs.addAll(
+                "-Xexpect-actual-classes",
+                "-opt-in=kotlin.RequiresOptIn",
+                "-opt-in=kotlin.time.ExperimentalTime",
+                "-Xcontext-parameters"
+            )
         }
     }
 }

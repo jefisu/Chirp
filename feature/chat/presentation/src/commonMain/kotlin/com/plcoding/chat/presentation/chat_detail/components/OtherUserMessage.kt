@@ -34,7 +34,8 @@ fun OtherUserMessage(
             sender = message.sender.username,
             trianglePosition = TrianglePosition.LEFT,
             color = color,
-            formattedDateTime = message.formattedSentTime.asString()
+            formattedDateTime = message.formattedSentTime.asString(),
+            attachments = message.attachments,
         )
     }
 }

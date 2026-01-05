@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.SpanStyle
@@ -25,17 +23,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import chirp.feature.chat.presentation.generated.resources.Res
-import chirp.feature.chat.presentation.generated.resources.group_chat
-import chirp.feature.chat.presentation.generated.resources.you
+import chirp.feature.chat.presentation.generated.resources.sent_a_image
+import chirp.feature.chat.presentation.generated.resources.sent_n_images
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
+import com.plcoding.chat.domain.models.MessageAttachmentType
 import com.plcoding.chat.presentation.components.ChatItemHeaderRow
 import com.plcoding.chat.presentation.model.ChatUi
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
-import com.plcoding.core.designsystem.components.avatar.ChirpStackedAvatars
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
-import com.plcoding.core.designsystem.theme.titleXSmall
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import kotlin.time.Clock
@@ -73,6 +70,15 @@ fun ChatListItemUi(
             )
 
             if (chat.lastMessage != null) {
+                val chatMessage = chat.lastMessage
+                val imageCount = chatMessage.attachments
+                    .filter { it.type == MessageAttachmentType.IMAGE }
+                    .size
+                val messageContent = when {
+                    !chatMessage.content.isNullOrBlank() -> chatMessage.content
+                    imageCount == 1 -> stringResource(Res.string.sent_a_image)
+                    else -> stringResource(Res.string.sent_n_images, imageCount)
+                }
                 val previewMessage = buildAnnotatedString {
                     withStyle(
                         style = SpanStyle(
@@ -84,7 +90,7 @@ fun ChatListItemUi(
                             append(chat.lastMessageSenderUsername + ": ")
                         }
                     }
-                    append(chat.lastMessage.content)
+                    append(messageContent)
                 }
                 Text(
                     text = previewMessage,
@@ -139,7 +145,8 @@ fun ChatListItemUiPreview() {
                             "and goes over multiple lines to showcase the ellipsis",
                     createdAt = Clock.System.now(),
                     senderId = "1",
-                    deliveryStatus = ChatMessageDeliveryStatus.SENT
+                    deliveryStatus = ChatMessageDeliveryStatus.SENT,
+                    attachments = emptyList()
                 ),
                 lastMessageSenderUsername = "Philipp"
             )

@@ -19,13 +19,18 @@ import platform.posix.memcpy
 import kotlin.math.roundToInt
 
 actual class NativeImageCompressor : ImageCompressor {
-    @OptIn(ExperimentalForeignApi::class)
+
     actual override suspend fun compressImage(
         file: File,
         compressionThreshold: Long,
         quality: Int
     ): ByteArray? = withContext(Dispatchers.Default) {
-        val inputData = file.bytes.toNSData()
+        val inputData = if (file.bytes.isNotEmpty()) {
+            file.bytes.toNSData()
+        } else {
+             return@withContext null
+        }
+        
         val image = UIImage(data = inputData)
 
         var outputBytes: ByteArray?

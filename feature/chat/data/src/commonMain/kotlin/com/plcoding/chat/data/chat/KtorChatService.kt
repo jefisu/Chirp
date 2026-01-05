@@ -3,7 +3,7 @@ package com.plcoding.chat.data.chat
 import com.plcoding.chat.data.dto.ChatDto
 import com.plcoding.chat.data.dto.request.CreateChatRequest
 import com.plcoding.chat.data.dto.request.ParticipantsRequest
-import com.plcoding.chat.data.mappers.toDomain
+import com.plcoding.chat.data.mappers.toChat
 import com.plcoding.chat.domain.chat.ChatService
 import com.plcoding.chat.domain.models.Chat
 import com.plcoding.core.data.networking.delete
@@ -26,21 +26,21 @@ class KtorChatService(
             body = CreateChatRequest(
                 otherUserIds = otherUserIds
             )
-        ).map { it.toDomain() }
+        ).map { it.toChat() }
     }
 
     override suspend fun getChats(): Result<List<Chat>, DataError.Remote> {
         return httpClient.get<List<ChatDto>>(
             route = "/chat"
         ).map { chatDtos ->
-            chatDtos.map { it.toDomain() }
+            chatDtos.map { it.toChat() }
         }
     }
 
     override suspend fun getChatById(chatId: String): Result<Chat, DataError.Remote> {
         return httpClient.get<ChatDto>(
             route = "/chat/$chatId"
-        ).map { it.toDomain() }
+        ).map { it.toChat() }
     }
 
     override suspend fun leaveChat(chatId: String): EmptyResult<DataError.Remote> {
@@ -58,6 +58,6 @@ class KtorChatService(
             body = ParticipantsRequest(
                 userIds = userIds
             )
-        ).map { it.toDomain() }
+        ).map { it.toChat() }
     }
 }

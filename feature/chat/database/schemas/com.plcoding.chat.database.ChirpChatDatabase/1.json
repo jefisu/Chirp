@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "2304568384f6e70cd389447c11213af7",
+    "identityHash": "f5d7512ff1c4d909e845a16146e1a423",
     "entities": [
       {
         "tableName": "ChatEntity",
@@ -59,7 +59,7 @@
       },
       {
         "tableName": "ChatMessageEntity",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`messageId` TEXT NOT NULL, `chatId` TEXT NOT NULL, `senderId` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `deliveryStatus` TEXT NOT NULL, `deliveryStatusTimestamp` INTEGER NOT NULL, PRIMARY KEY(`messageId`), FOREIGN KEY(`chatId`) REFERENCES `ChatEntity`(`chatId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`messageId` TEXT NOT NULL, `chatId` TEXT NOT NULL, `senderId` TEXT NOT NULL, `content` TEXT, `timestamp` INTEGER NOT NULL, `deliveryStatus` TEXT NOT NULL, `deliveryStatusTimestamp` INTEGER NOT NULL, PRIMARY KEY(`messageId`), FOREIGN KEY(`chatId`) REFERENCES `ChatEntity`(`chatId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "messageId",
@@ -82,8 +82,7 @@
           {
             "fieldPath": "content",
             "columnName": "content",
-            "affinity": "TEXT",
-            "notNull": true
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "timestamp",
@@ -218,17 +217,66 @@
             ]
           }
         ]
+      },
+      {
+        "tableName": "ChatFileEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `url` TEXT NOT NULL, `messageId` TEXT NOT NULL, `type` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`messageId`) REFERENCES `ChatMessageEntity`(`messageId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "url",
+            "columnName": "url",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "messageId",
+            "columnName": "messageId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "ChatMessageEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "messageId"
+            ],
+            "referencedColumns": [
+              "messageId"
+            ]
+          }
+        ]
       }
     ],
     "views": [
       {
         "viewName": "last_message_view_per_chat",
-        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT m1.*, p.username AS senderUsername\n        FROM chatmessageentity m1\n        JOIN (\n            SELECT chatId, MAX(timestamp) AS max_timestamp\n            FROM chatmessageentity\n            GROUP BY chatId\n        ) m2 ON m1.chatId = m2.chatId AND m1.timestamp = m2.max_timestamp\n        LEFT JOIN chatparticipantentity p ON m1.senderId = p.userId"
+        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT \n            m1.*, \n            p.username AS senderUsername,\n            GROUP_CONCAT(i.id || '::::' || i.url || '::::' || i.messageId || '::::' || i.type, '||||') AS attachedFiles\n        FROM chatmessageentity m1\n        JOIN (\n            SELECT chatId, MAX(timestamp) AS max_timestamp\n            FROM chatmessageentity\n            GROUP BY chatId\n        ) m2 ON m1.chatId = m2.chatId AND m1.timestamp = m2.max_timestamp\n        LEFT JOIN chatparticipantentity p ON m1.senderId = p.userId\n        LEFT JOIN chatfileentity i ON m1.messageId = i.messageId\n        GROUP BY m1.messageId"
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2304568384f6e70cd389447c11213af7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f5d7512ff1c4d909e845a16146e1a423')"
     ]
   }
 }

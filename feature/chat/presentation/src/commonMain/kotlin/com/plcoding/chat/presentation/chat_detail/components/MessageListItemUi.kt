@@ -13,10 +13,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
-import com.plcoding.chat.domain.models.ChatParticipant
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.util.getChatBubbleColorForUser
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
+import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
 import com.plcoding.core.presentation.util.UiText
@@ -30,18 +30,20 @@ fun MessageListItemUi(
     onDismissMessageMenu: () -> Unit,
     onDeleteClick: (MessageUi.LocalUserMessage) -> Unit,
     onRetryClick: (MessageUi.LocalUserMessage) -> Unit,
+    onAttachmentClick: (MessageAttachmentUi) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
     ) {
-        when(messageUi) {
+        when (messageUi) {
             is MessageUi.DateSeparator -> {
                 DateSeparatorUi(
                     date = messageUi.date.asString(),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+
             is MessageUi.LocalUserMessage -> {
                 LocalUserMessage(
                     message = messageUi,
@@ -49,9 +51,11 @@ fun MessageListItemUi(
                     onMessageLongClick = { onMessageLongClick(messageUi) },
                     onDismissMessageMenu = onDismissMessageMenu,
                     onDeleteClick = { onDeleteClick(messageUi) },
-                    onRetryClick = { onRetryClick(messageUi) }
+                    onRetryClick = { onRetryClick(messageUi) },
+                    onAttachmentClick = onAttachmentClick
                 )
             }
+
             is MessageUi.OtherUserMessage -> {
                 OtherUserMessage(
                     message = messageUi,
@@ -94,13 +98,15 @@ fun MessageListItemLocalMessageUiPreview() {
                 id = "1",
                 content = "Hello world, this is a preview message that spans multiple lines",
                 deliveryStatus = ChatMessageDeliveryStatus.SENT,
-                formattedSentTime = UiText.DynamicString("Friday 2:20pm")
+                formattedSentTime = UiText.DynamicString("Friday 2:20pm"),
+                attachments = emptyList(),
             ),
             messageWithOpenMenu = null,
             onRetryClick = {},
             onMessageLongClick = {},
             onDismissMessageMenu = {},
             onDeleteClick = {},
+            onAttachmentClick = {},
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
@@ -117,13 +123,15 @@ fun MessageListItemLocalMessageRetryUiPreview() {
                 id = "1",
                 content = "Hello world, this is a preview message that spans multiple lines",
                 deliveryStatus = ChatMessageDeliveryStatus.FAILED,
-                formattedSentTime = UiText.DynamicString("Friday 2:20pm")
+                formattedSentTime = UiText.DynamicString("Friday 2:20pm"),
+                attachments = emptyList(),
             ),
             messageWithOpenMenu = null,
             onRetryClick = {},
             onMessageLongClick = {},
             onDismissMessageMenu = {},
             onDeleteClick = {},
+            onAttachmentClick = {},
             modifier = Modifier
                 .fillMaxWidth()
         )
@@ -142,14 +150,16 @@ fun MessageListItemOtherMessageUiPreview() {
                 sender = ChatParticipantUi(
                     id = "1",
                     username = "Philipp",
-                    initials = "PH"
-                )
+                    initials = "PH",
+                ),
+                attachments = emptyList(),
             ),
             messageWithOpenMenu = null,
             onRetryClick = {},
             onMessageLongClick = {},
             onDismissMessageMenu = {},
             onDeleteClick = {},
+            onAttachmentClick = {},
             modifier = Modifier
                 .fillMaxWidth()
         )

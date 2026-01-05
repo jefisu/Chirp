@@ -42,6 +42,8 @@
     <string name="drop_picture_info">Drop your image here to upload as your new profile picture</string>
     <string name="error_participant_not_found">No participant found</string>
     <string name="drop_images_to_share">Drop your image here to share</string>
+    <string name="sent_a_image">Sent a image</string>
+    <string name="sent_n_images">Sent %1$d images</string>
 
     <string name="profile_settings">Profile settings</string>
     <string name="show_password">Show password</string>

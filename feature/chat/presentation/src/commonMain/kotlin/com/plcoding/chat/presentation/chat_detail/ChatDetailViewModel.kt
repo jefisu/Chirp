@@ -17,7 +17,9 @@ import com.plcoding.chat.domain.models.OutgoingNewMessage
 import com.plcoding.chat.presentation.mappers.toUi
 import com.plcoding.chat.presentation.mappers.toUiList
 import com.plcoding.chat.presentation.model.MessageUi
+import com.plcoding.chat.presentation.util.toFile
 import com.plcoding.core.domain.auth.SessionStorage
+import com.plcoding.core.domain.media.File
 import com.plcoding.core.domain.util.DataErrorException
 import com.plcoding.core.domain.util.Paginator
 import com.plcoding.core.domain.util.onFailure
@@ -48,7 +50,7 @@ class ChatDetailViewModel(
     private val chatRepository: ChatRepository,
     private val sessionStorage: SessionStorage,
     private val messageRepository: MessageRepository,
-    private val connectionClient: ChatConnectionClient
+    private val connectionClient: ChatConnectionClient,
 ) : ViewModel() {
 
     private val eventChannel = Channel<ChatDetailEvent>()
@@ -60,6 +62,8 @@ class ChatDetailViewModel(
 
     private var currentPaginator: Paginator<String?, ChatMessage>? = null
 
+    private val temporaryAttachmentFiles = MutableStateFlow(emptyMap<String, File>())
+
     private val chatInfoFlow = _chatId
         .onEach { chatId ->
             if (chatId != null) {
@@ -67,6 +71,7 @@ class ChatDetailViewModel(
                 loadNextItems()
             } else {
                 currentPaginator = null
+                temporaryAttachmentFiles.update { emptyMap() }
             }
         }
         .flatMapLatest { chatId ->
@@ -77,25 +82,29 @@ class ChatDetailViewModel(
 
     private val _state = MutableStateFlow(ChatDetailState())
 
-    private val canSendMessage = snapshotFlow { _state.value.messageTextFieldState.text.toString() }
-        .map { it.isBlank() }
-        .combine(connectionClient.connectionState) { isMessageBlank, connectionState ->
-            !isMessageBlank && connectionState == ConnectionState.CONNECTED
-        }
+    private val canSendMessage = combine(
+        snapshotFlow { _state.value.messageTextFieldState.text.toString() },
+        _state.map { it.imagesSelected }.distinctUntilChanged(),
+        connectionClient.connectionState
+    ) { text, images, connectionState ->
+        connectionState == ConnectionState.CONNECTED && (text.isNotBlank() || images.isNotEmpty())
+    }
 
 
     private val stateWithMessages = combine(
         _state,
         chatInfoFlow,
-        sessionStorage.observeAuthInfo()
-    ) { currentState, chatInfo, authInfo ->
+        sessionStorage.observeAuthInfo(),
+        temporaryAttachmentFiles
+    ) { currentState, chatInfo, authInfo, temporaryFiles ->
         if (authInfo == null) {
             return@combine ChatDetailState()
         }
 
         currentState.copy(
             chatUi = chatInfo.chat.toUi(authInfo.user.id),
-            messages = chatInfo.messages.toUiList(authInfo.user.id)
+            messages = chatInfo.messages
+                .toUiList(authInfo.user.id, temporaryFiles)
         )
     }
 
@@ -141,7 +150,7 @@ class ChatDetailViewModel(
             is ChatDetailAction.OnRemoveImageSelected -> removeImageSelected(action.image)
             ChatDetailAction.OnDismissErrorDialog -> dismissError()
             ChatDetailAction.OnDismissImagePreview -> dismissImagePreview()
-            is ChatDetailAction.OnImageClick -> showImagePreview(action.image)
+            is ChatDetailAction.OnAttachmentClick -> showAttachmentPreview(action.data)
             else -> Unit
         }
     }
@@ -153,15 +162,15 @@ class ChatDetailViewModel(
         }
     }
 
-    private fun showImagePreview(image: PickedImageData) {
+    private fun showAttachmentPreview(attachment: Any) {
         _state.update {
-            it.copy(previewImage = image)
+            it.copy(attachmentPreviewData = attachment)
         }
     }
 
     private fun dismissImagePreview() {
         _state.update {
-            it.copy(previewImage = null)
+            it.copy(attachmentPreviewData = null)
         }
     }
 
@@ -294,21 +303,28 @@ class ChatDetailViewModel(
     private fun sendMessage() {
         val currentChatId = _chatId.value
         val content = state.value.messageTextFieldState.text.toString().trim()
-        if (content.isBlank() || currentChatId == null) {
-            return
-        }
+        val filesToUpload = _state.value.imagesSelected.map { it.toFile() }
+        if (
+            (content.isBlank() && filesToUpload.isEmpty())
+            || currentChatId == null
+        ) return
 
         viewModelScope.launch {
-            val message = OutgoingNewMessage(
-                chatId = currentChatId,
-                messageId = Uuid.random().toString(),
-                content = content
-            )
-
             messageRepository
-                .sendMessage(message)
-                .onSuccess {
+                .sendMessage(
+                    OutgoingNewMessage(
+                        chatId = currentChatId,
+                        messageId = Uuid.random().toString(),
+                        content = content.ifBlank { null },
+                        media = filesToUpload
+                    )
+                )
+                .onSuccess { attachments ->
                     state.value.messageTextFieldState.clearText()
+                    _state.update { it.copy(imagesSelected = emptyList()) }
+                    temporaryAttachmentFiles.update {
+                        attachments.associate { it.messageAttachment.id to it.file }
+                    }
                 }
                 .onFailure { error ->
                     eventChannel.send(ChatDetailEvent.OnError(error.toUiText()))

@@ -27,6 +27,7 @@ import com.plcoding.chat.presentation.components.EmptySection
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.core.designsystem.components.buttons.ChirpButton
 import com.plcoding.core.designsystem.components.buttons.ChirpButtonStyle
+import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -41,6 +42,7 @@ fun MessageList(
     onRetryPaginationClick: () -> Unit,
     onDismissMessageMenu: () -> Unit,
     onDeleteMessageClick: (MessageUi.LocalUserMessage) -> Unit,
+    onAttachmentClick: (MessageAttachmentUi) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if(messages.isEmpty()) {
@@ -73,6 +75,7 @@ fun MessageList(
                     onDismissMessageMenu = onDismissMessageMenu,
                     onDeleteClick = onDeleteMessageClick,
                     onRetryClick = onMessageRetryClick,
+                    onAttachmentClick = onAttachmentClick,
                     modifier = Modifier
                         .fillMaxWidth()
                         .animateItem()
