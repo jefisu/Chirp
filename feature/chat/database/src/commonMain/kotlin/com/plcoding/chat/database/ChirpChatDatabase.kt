@@ -3,8 +3,6 @@ package com.plcoding.chat.database
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
-import com.plcoding.chat.database.converters.LastMessageViewConverter
 import com.plcoding.chat.database.dao.ChatDao
 import com.plcoding.chat.database.dao.ChatMessageDao
 import com.plcoding.chat.database.dao.ChatParticipantDao
@@ -31,9 +29,8 @@ import com.plcoding.chat.database.view.LastMessageView
     views = [
         LastMessageView::class
     ],
-    version = 2,
+    version = 1,
 )
-@TypeConverters(LastMessageViewConverter::class)
 @ConstructedBy(ChirpChatDatabaseConstructor::class)
 abstract class ChirpChatDatabase: RoomDatabase() {
     abstract val chatDao: ChatDao
