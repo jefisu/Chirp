@@ -8,7 +8,7 @@ interface ImageCompressor {
     ): ByteArray?
 
     companion object {
-        const val COMPRESSION_THRESHOLD = 200 * 1024L
+        const val COMPRESSION_THRESHOLD = 1024 * 1024L // 1 MB
         const val DEFAULT_QUALITY = 90
     }
 }
