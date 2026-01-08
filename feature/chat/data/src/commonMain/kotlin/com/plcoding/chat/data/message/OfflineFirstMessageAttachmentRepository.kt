@@ -97,12 +97,6 @@ class OfflineFirstMessageAttachmentRepository(
             val preparedData = compressAndPrepare(attachmentId, rootFile)
                 ?: return Result.Failure(DataError.Local.COMPRESSION_FAILED)
 
-            database.messageAttachmentDao.updateAttachmentUrlAndStatus(
-                attachmentId = attachmentId,
-                url = preparedData.pending.localPath,
-                status = AttachmentUploadStatus.UPLOADING
-            )
-
             messageAttachmentService.uploadFile(
                 attachmentId = attachmentId,
                 uploadUrl = preparedData.pending.uploadUrl,
@@ -204,6 +198,12 @@ class OfflineFirstMessageAttachmentRepository(
                 handleUploadFailure(attachmentId, pendingUpload.localPath)
                 return null
             }
+
+        database.messageAttachmentDao.updateAttachmentUrlAndStatus(
+            attachmentId = attachmentId,
+            url = currentLocalPath,
+            status = AttachmentUploadStatus.UPLOADING
+        )
 
         if (rootFile != null) {
             fileStore.saveFile(
