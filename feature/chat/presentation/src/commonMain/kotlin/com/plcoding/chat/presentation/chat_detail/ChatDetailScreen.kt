@@ -196,7 +196,7 @@ fun ChatDetailScreen(
             onEvent(ChatDetailEvent.OnError(error))
         }
     )
-    if (isHoveringWithFiles) {
+    if (isHoveringWithFiles && state.chatUi != null) {
         DragAndDropOverlay(
             modifier = Modifier.zIndex(1f),
             description = stringResource(Res.string.drop_images_to_share)
@@ -253,7 +253,7 @@ fun ChatDetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .dragAndDropTarget(
-                shouldStartDragAndDrop = { true },
+                shouldStartDragAndDrop = { state.chatUi != null },
                 target = dragAndDropTarget
             ),
         containerColor = if (!configuration.isWideScreen) {
