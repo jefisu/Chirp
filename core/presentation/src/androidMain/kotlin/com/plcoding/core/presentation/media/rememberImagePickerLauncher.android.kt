@@ -15,9 +15,10 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 
 @Composable
-actual fun <PickerResult> rememberImagePickerLauncher(
+actual fun <PickerResult> rememberImagePickerLauncherImpl(
     onError: ((UiText) -> Unit)?,
     mode: ImagePickerMode<PickerResult>,
+    onLoading: (Boolean) -> Unit,
     onResult: (PickerResult) -> Unit
 ): ImagePickerLauncher {
     val context = LocalContext.current
@@ -28,6 +29,7 @@ actual fun <PickerResult> rememberImagePickerLauncher(
         scope = scope,
         parser = parser,
         mode = mode,
+        onLoading = onLoading,
         onResult = onResult
     )
 
@@ -35,6 +37,7 @@ actual fun <PickerResult> rememberImagePickerLauncher(
         scope = scope,
         parser = parser,
         mode = mode,
+        onLoading = onLoading,
         onResult = onResult
     )
 
@@ -54,6 +57,7 @@ private fun <PickerResult> rememberSingleImagePickerLauncher(
     scope: CoroutineScope,
     parser: ContentUriParser,
     mode: ImagePickerMode<PickerResult>,
+    onLoading: (Boolean) -> Unit,
     onResult: (PickerResult) -> Unit
 ) = run {
     @Suppress("UNCHECKED_CAST")
@@ -68,10 +72,12 @@ private fun <PickerResult> rememberSingleImagePickerLauncher(
             return@rememberLauncherForActivityResult
         }
 
+        onLoading(true)
         scope.launch {
             val dimensions = parser.getDimensions(contentUri)
             val pickedImage = PickedImageData(
                 bytes = parser.readUri(contentUri) ?: run {
+                    onLoading(false)
                     mode.consumeResult(
                         result = null as PickerResult,
                         onConsumed = onResult
@@ -85,6 +91,7 @@ private fun <PickerResult> rememberSingleImagePickerLauncher(
                 parser.getFileName(contentUri)?.let { image.copy(name = it) } ?: image
             }
 
+            onLoading(false)
             mode.consumeResult(
                 result = pickedImage as PickerResult,
                 onConsumed = onResult
@@ -98,6 +105,7 @@ private fun <PickerResult> rememberMultipleImagesPickerLauncher(
     scope: CoroutineScope,
     parser: ContentUriParser,
     mode: ImagePickerMode<PickerResult>,
+    onLoading: (Boolean) -> Unit,
     onResult: (PickerResult) -> Unit
 ) = run {
     @Suppress("UNCHECKED_CAST")
@@ -114,6 +122,7 @@ private fun <PickerResult> rememberMultipleImagesPickerLauncher(
             return@rememberLauncherForActivityResult
         }
 
+        onLoading(true)
         scope.launch {
             val pickedImages = contentUris
                 .fastMap { contentUri ->
@@ -132,6 +141,7 @@ private fun <PickerResult> rememberMultipleImagesPickerLauncher(
                 .awaitAll()
                 .filterNotNull()
 
+            onLoading(false)
             mode.consumeResult(
                 result = pickedImages as PickerResult,
                 onConsumed = onResult

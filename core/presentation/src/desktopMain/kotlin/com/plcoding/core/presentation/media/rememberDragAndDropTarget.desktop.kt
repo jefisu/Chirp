@@ -18,11 +18,12 @@ import java.awt.dnd.DropTargetDropEvent
 import java.io.File
 
 @Composable
-actual fun <DropResult> rememberDragAndDropTarget(
+actual fun <DropResult> rememberDragAndDropTargetImpl(
     onError: ((UiText) -> Unit)?,
     mode: ImagePickerMode<DropResult>,
     onHover: (Boolean) -> Unit,
-    onDrop: (DropResult) -> Unit
+    onDrop: (DropResult) -> Unit,
+    onLoading: (Boolean) -> Unit
 ): DragAndDropTarget {
     val scope = rememberCoroutineScope()
     return remember {
@@ -48,6 +49,7 @@ actual fun <DropResult> rememberDragAndDropTarget(
                     return false
                 }
 
+                onLoading(true)
                 scope.launch(Dispatchers.IO) {
                     val pickedImages = fileList
                         .map {
@@ -64,6 +66,7 @@ actual fun <DropResult> rememberDragAndDropTarget(
                         is ImagePickerMode.Multiple -> pickedImages.take(mode.maxItems)
                     } as DropResult
 
+                    onLoading(false)
                     onDrop(result)
                 }
 

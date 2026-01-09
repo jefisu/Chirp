@@ -19,4 +19,7 @@
     <string name="error_unable_to_send_message">An error happened while sending the message</string>
     <string name="error_invalid_images">Only images can be selected</string>
     <string name="error_compression_failed">Failed to compress image</string>
+
+    <string name="processing_image">Processing image...</string>
+    <string name="optimizing_for_upload">Optimizing for upload</string>
 </resources>

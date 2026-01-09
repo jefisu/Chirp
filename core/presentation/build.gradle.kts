@@ -21,6 +21,7 @@ kotlin {
                 implementation(libs.bundles.koin.common)
 
                 implementation(compose.components.resources)
+                implementation(compose.materialIconsExtended)
 
                 implementation(libs.coil.compose)
             }

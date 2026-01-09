@@ -8,11 +8,12 @@ import com.plcoding.core.presentation.util.UiText
 
 // Drag and drop not supported on mobile platforms
 @Composable
-actual fun <DropResult> rememberDragAndDropTarget(
+actual fun <DropResult> rememberDragAndDropTargetImpl(
     onError: ((UiText) -> Unit)?,
     mode: ImagePickerMode<DropResult>,
     onHover: (Boolean) -> Unit,
-    onDrop: (DropResult) -> Unit
+    onDrop: (DropResult) -> Unit,
+    onLoading: (Boolean) -> Unit
 ): DragAndDropTarget {
     return remember {
         object : DragAndDropTarget {
