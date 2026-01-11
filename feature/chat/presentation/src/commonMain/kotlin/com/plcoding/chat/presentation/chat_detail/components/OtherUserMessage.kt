@@ -11,12 +11,15 @@ import androidx.compose.ui.unit.dp
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.core.designsystem.components.avatar.ChirpAvatarPhoto
 import com.plcoding.core.designsystem.components.chat.ChirpChatBubble
+import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import com.plcoding.core.designsystem.components.chat.TrianglePosition
 
 @Composable
 fun OtherUserMessage(
     message: MessageUi.OtherUserMessage,
     color: Color,
+    onAttachmentLongClick: (MessageAttachmentUi) -> Unit,
+    onAttachmentClick: (MessageAttachmentUi) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -36,6 +39,8 @@ fun OtherUserMessage(
             color = color,
             formattedDateTime = message.formattedSentTime.asString(),
             attachments = message.attachments,
+            onAttachmentClick = onAttachmentClick,
+            onAttachmentLongClick = onAttachmentLongClick,
         )
     }
 }

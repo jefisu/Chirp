@@ -4,6 +4,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import com.plcoding.chat.domain.models.ConnectionState
 import com.plcoding.chat.presentation.model.ChatUi
 import com.plcoding.chat.presentation.model.MessageUi
+import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import com.plcoding.core.presentation.media.PickedImageData
 import com.plcoding.core.presentation.util.UiText
 
@@ -18,6 +19,7 @@ data class ChatDetailState(
     val paginationError: UiText? = null,
     val endReached: Boolean = false,
     val messageWithOpenMenu: MessageUi.LocalUserMessage? = null,
+    val attachmentWithOpenMenu: MessageAttachmentUi? = null,
     val bannerState: BannerState = BannerState(),
     val isChatOptionsOpen: Boolean = false,
     val isNearBottom: Boolean = false,

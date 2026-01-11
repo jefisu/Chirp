@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -52,6 +53,7 @@ import chirp.feature.chat.presentation.generated.resources.select_a_chat
 import coil3.compose.rememberAsyncImagePainter
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
+import com.plcoding.chat.presentation.chat_detail.components.AttachmentContextMenu
 import com.plcoding.chat.presentation.chat_detail.components.ChatDetailHeader
 import com.plcoding.chat.presentation.chat_detail.components.DateChip
 import com.plcoding.chat.presentation.chat_detail.components.ImagePreviewDialog
@@ -244,6 +246,16 @@ fun ChatDetailScreen(
         }
     )
 
+    AttachmentContextMenu(
+        attachment = state.attachmentWithOpenMenu,
+        onDismiss = { onAction(ChatDetailAction.OnDismissAttachmentMenu) },
+        onSaveClick = {
+            state.attachmentWithOpenMenu?.let {
+                onAction(ChatDetailAction.OnSaveAttachmentClick(it))
+            }
+        }
+    )
+
     var headerHeight by remember {
         mutableStateOf(0.dp)
     }
@@ -255,6 +267,9 @@ fun ChatDetailScreen(
             .dragAndDropTarget(
                 shouldStartDragAndDrop = { state.chatUi != null },
                 target = dragAndDropTarget
+            )
+            .blur(
+                radius = if (state.attachmentWithOpenMenu != null) 20.dp else 0.dp
             ),
         containerColor = if (!configuration.isWideScreen) {
             MaterialTheme.colorScheme.surface
@@ -270,9 +285,8 @@ fun ChatDetailScreen(
                 .clearFocusOnTap()
                 .padding(innerPadding)
                 .then(
-                    if (configuration.isWideScreen) {
-                        Modifier.padding(horizontal = 8.dp)
-                    } else Modifier
+                    if (configuration.isWideScreen) Modifier.padding(horizontal = 8.dp)
+                    else Modifier
                 )
         ) {
             Column(
@@ -345,6 +359,9 @@ fun ChatDetailScreen(
                             },
                             onAttachmentClick = { attachment ->
                                 onAction(ChatDetailAction.OnAttachmentClick(attachment.url))
+                            },
+                            onAttachmentLongClick = { attachment ->
+                                onAction(ChatDetailAction.OnAttachmentLongClick(attachment))
                             },
                             modifier = Modifier
                                 .fillMaxWidth()

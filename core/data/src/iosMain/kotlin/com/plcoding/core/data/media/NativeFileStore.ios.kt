@@ -1,9 +1,11 @@
-@file:OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 
 package com.plcoding.core.data.media
 
 import com.plcoding.core.domain.logging.ChirpLogger
 import com.plcoding.core.domain.media.FileStore
+import com.plcoding.core.domain.media.StorageDestination
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
@@ -13,40 +15,48 @@ import kotlinx.coroutines.withContext
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSString
 import platform.Foundation.NSUserDomainMask
-import platform.Foundation.dataWithBytes
+import platform.Foundation.create
 import platform.Foundation.dataWithContentsOfFile
+import platform.Foundation.stringByAppendingPathComponent
 import platform.Foundation.writeToFile
+import platform.UIKit.UIImage
+import platform.UIKit.UIImageWriteToSavedPhotosAlbum
 import platform.posix.memcpy
 
 actual class NativeFileStore(
     private val logger: ChirpLogger
 ) : FileStore {
 
-    actual override suspend fun saveFile(bytes: ByteArray, fileName: String): String? {
+    actual override suspend fun saveFile(
+        bytes: ByteArray,
+        fileName: String,
+        destination: StorageDestination
+    ): String? {
         return withContext(Dispatchers.Default) {
-            val fullPath = getFilePath(fileName)
-            val data = bytes.toNSData()
             runCatching {
-                data.writeToFile(fullPath, true)
-                fullPath
-            }.onFailure { e ->
+                when (destination) {
+                    StorageDestination.GALLERY -> {
+                        saveToGallery(bytes)
+                        null
+                    }
+
+                    else -> saveToInternalStorage(fileName, bytes)
+                }
+            }.onFailure {
                 coroutineContext.ensureActive()
-                logger.error("Failed to save file: $fileName", e)
-                e.printStackTrace()
+                logger.error("Failed to write to file: $fileName", it)
             }.getOrNull()
         }
     }
 
+    @Suppress("CAST_NEVER_SUCCEEDS")
     actual override fun getFilePath(fileName: String): String {
-        val documentDirectory = NSFileManager.defaultManager.URLForDirectory(
-            directory = NSDocumentDirectory,
-            inDomain = NSUserDomainMask,
-            appropriateForURL = null,
-            create = true,
-            error = null
-        )
-        return requireNotNull(documentDirectory?.path) + "/" + fileName
+        val paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
+        val directory = paths.firstOrNull() as? String ?: ""
+        return (directory as NSString).stringByAppendingPathComponent(fileName)
     }
 
     actual override suspend fun getFile(filePath: String): ByteArray? {
@@ -74,11 +84,20 @@ actual class NativeFileStore(
         }
     }
 
-    private fun ByteArray.toNSData(): NSData {
-        if (isEmpty()) return NSData.dataWithBytes(null, 0u)
-        return usePinned {
-            NSData.dataWithBytes(it.addressOf(0), size.toULong())
-        }
+    private fun saveToInternalStorage(
+        fileName: String,
+        bytes: ByteArray
+    ): String {
+        val fullPath = getFilePath(fileName)
+        val data = bytes.toNSData()
+        data.writeToFile(fullPath, true)
+        return fullPath
+    }
+
+    private fun saveToGallery(bytes: ByteArray) {
+        val nsData = bytes.toNSData()
+        val uiImage = UIImage(nsData)
+        UIImageWriteToSavedPhotosAlbum(uiImage, null, null, null)
     }
 
     private fun NSData.toByteArray(): ByteArray {
@@ -88,6 +107,15 @@ actual class NativeFileStore(
             usePinned {
                 memcpy(it.addressOf(0), bytes, length)
             }
+        }
+    }
+
+    private fun ByteArray.toNSData(): NSData {
+        return usePinned {
+            NSData.create(
+                bytes = it.addressOf(0),
+                length = size.toULong(),
+            )
         }
     }
 }

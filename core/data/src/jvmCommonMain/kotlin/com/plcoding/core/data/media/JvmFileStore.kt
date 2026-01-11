@@ -16,10 +16,14 @@ class JvmFileStore(
         fileName: String,
     ): String? {
         return withContext(Dispatchers.IO) {
-            val file = File(directory, fileName)
             runCatching {
-                file.writeBytes(bytes)
-                file.absolutePath
+                if (!directory.exists()) {
+                    directory.mkdirs()
+                }
+
+                File(directory, fileName)
+                    .apply { writeBytes(bytes) }
+                    .absolutePath
             }.onFailure { e ->
                 coroutineContext.ensureActive()
                 logger.error("Failed to save file: $fileName", e)

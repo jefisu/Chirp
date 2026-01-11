@@ -27,4 +27,5 @@ interface MessageAttachmentRepository {
     suspend fun retryAttachmentUpload(attachmentId: String): Result<PendingAttachment, DataError>
 
     suspend fun deleteAttachment(attachmentId: String)
+    suspend fun downloadAttachment(publicUrl: String): EmptyResult<DataError.Remote>
 }

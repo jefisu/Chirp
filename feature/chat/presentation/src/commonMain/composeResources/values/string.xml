@@ -61,4 +61,6 @@
     <string name="error_current_password_incorrect">Your current password is not correct</string>
     <string name="error_current_password_equal_to_new_one">Your new password can't be equal to the old one.</string>
     <string name="error_invalid_file_type">This file type is not supported.</string>
+    <string name="image_saved_successfully">Image saved successfully</string>
+    <string name="error_saving_image">Error saving image</string>
 </resources>

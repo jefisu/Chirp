@@ -31,6 +31,7 @@ fun MessageListItemUi(
     onDeleteClick: (MessageUi.LocalUserMessage) -> Unit,
     onRetryClick: (MessageUi.LocalUserMessage) -> Unit,
     onAttachmentClick: (MessageAttachmentUi) -> Unit,
+    onAttachmentLongClick: (MessageAttachmentUi) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -52,14 +53,17 @@ fun MessageListItemUi(
                     onDismissMessageMenu = onDismissMessageMenu,
                     onDeleteClick = { onDeleteClick(messageUi) },
                     onRetryClick = { onRetryClick(messageUi) },
-                    onAttachmentClick = onAttachmentClick
+                    onAttachmentClick = onAttachmentClick,
+                    onAttachmentLongClick = onAttachmentLongClick,
                 )
             }
 
             is MessageUi.OtherUserMessage -> {
                 OtherUserMessage(
                     message = messageUi,
-                    color = getChatBubbleColorForUser(messageUi.sender.id)
+                    color = getChatBubbleColorForUser(messageUi.sender.id),
+                    onAttachmentLongClick = onAttachmentLongClick,
+                    onAttachmentClick = onAttachmentClick,
                 )
             }
         }
@@ -107,9 +111,10 @@ fun MessageListItemLocalMessageUiPreview() {
             onDismissMessageMenu = {},
             onDeleteClick = {},
             onAttachmentClick = {},
+            onAttachmentLongClick = {},
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(200.dp),
         )
     }
 }
@@ -132,6 +137,7 @@ fun MessageListItemLocalMessageRetryUiPreview() {
             onDismissMessageMenu = {},
             onDeleteClick = {},
             onAttachmentClick = {},
+            onAttachmentLongClick = {},
             modifier = Modifier
                 .fillMaxWidth()
         )
@@ -160,6 +166,7 @@ fun MessageListItemOtherMessageUiPreview() {
             onDismissMessageMenu = {},
             onDeleteClick = {},
             onAttachmentClick = {},
+            onAttachmentLongClick = {},
             modifier = Modifier
                 .fillMaxWidth()
         )

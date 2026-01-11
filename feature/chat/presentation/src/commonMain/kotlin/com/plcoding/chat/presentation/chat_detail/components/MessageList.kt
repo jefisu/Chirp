@@ -43,9 +43,10 @@ fun MessageList(
     onDismissMessageMenu: () -> Unit,
     onDeleteMessageClick: (MessageUi.LocalUserMessage) -> Unit,
     onAttachmentClick: (MessageAttachmentUi) -> Unit,
+    onAttachmentLongClick: (MessageAttachmentUi) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if(messages.isEmpty()) {
+    if (messages.isEmpty()) {
         Box(
             modifier = modifier
                 .padding(vertical = 32.dp),
@@ -76,6 +77,7 @@ fun MessageList(
                     onDeleteClick = onDeleteMessageClick,
                     onRetryClick = onMessageRetryClick,
                     onAttachmentClick = onAttachmentClick,
+                    onAttachmentLongClick = onAttachmentLongClick,
                     modifier = Modifier
                         .fillMaxWidth()
                         .animateItem()

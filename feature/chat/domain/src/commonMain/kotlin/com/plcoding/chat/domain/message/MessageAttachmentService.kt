@@ -19,4 +19,6 @@ interface MessageAttachmentService {
         onSuccess: suspend () -> Unit,
         onFailure: suspend () -> Unit
     )
+
+    suspend fun downloadAttachment(url: String): Result<ByteArray, DataError.Remote>
 }

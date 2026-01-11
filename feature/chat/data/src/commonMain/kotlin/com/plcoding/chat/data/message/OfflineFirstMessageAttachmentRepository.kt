@@ -16,9 +16,11 @@ import com.plcoding.core.domain.logging.ChirpLogger
 import com.plcoding.core.domain.media.File
 import com.plcoding.core.domain.media.FileStore
 import com.plcoding.core.domain.media.ImageCompressor
+import com.plcoding.core.domain.media.StorageDestination
 import com.plcoding.core.domain.util.DataError
 import com.plcoding.core.domain.util.EmptyResult
 import com.plcoding.core.domain.util.Result
+import com.plcoding.core.domain.util.asEmptyResult
 import com.plcoding.core.domain.util.map
 import com.plcoding.core.domain.util.onFailure
 import com.plcoding.core.domain.util.onSuccess
@@ -145,6 +147,17 @@ class OfflineFirstMessageAttachmentRepository(
             ?: return
 
         fileStore.deleteFile(pendingUpload.localPath)
+    }
+
+    override suspend fun downloadAttachment(publicUrl: String): EmptyResult<DataError.Remote> {
+        return messageAttachmentService
+            .downloadAttachment(publicUrl)
+            .onSuccess { bytes ->
+                val extension = publicUrl.substringAfterLast(".")
+                val fileName = "Chirp_image_${Uuid.random()}.$extension"
+                fileStore.saveFile(bytes, fileName, StorageDestination.GALLERY)
+            }
+            .asEmptyResult()
     }
 
     private fun mapToPendingAttachment(entity: PendingAttachmentEntity): Result<PendingAttachment, DataError> {

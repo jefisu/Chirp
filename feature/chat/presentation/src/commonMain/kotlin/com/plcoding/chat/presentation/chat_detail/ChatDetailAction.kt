@@ -1,6 +1,7 @@
 package com.plcoding.chat.presentation.chat_detail
 
 import com.plcoding.chat.presentation.model.MessageUi
+import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import com.plcoding.core.presentation.media.PickedImageData
 
 sealed interface ChatDetailAction {
@@ -25,4 +26,7 @@ sealed interface ChatDetailAction {
     data object OnDismissImagePreview : ChatDetailAction
     data object OnDismissErrorDialog : ChatDetailAction
     data class OnAttachmentClick(val data: Any) : ChatDetailAction
+    data class OnAttachmentLongClick(val attachment: MessageAttachmentUi) : ChatDetailAction
+    data object OnDismissAttachmentMenu : ChatDetailAction
+    data class OnSaveAttachmentClick(val attachment: MessageAttachmentUi) : ChatDetailAction
 }

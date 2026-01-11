@@ -39,4 +39,8 @@ actual class UploaderMessageAttachmentService(
             onFailure()
         }
     }
+
+    actual override suspend fun downloadAttachment(url: String): Result<ByteArray, DataError.Remote> {
+        TODO("Not implemented")
+    }
 }

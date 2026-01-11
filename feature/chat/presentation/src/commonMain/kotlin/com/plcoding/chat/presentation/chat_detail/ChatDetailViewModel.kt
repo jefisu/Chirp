@@ -7,9 +7,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import chirp.feature.chat.presentation.generated.resources.Res
+import chirp.feature.chat.presentation.generated.resources.error_saving_image
+import chirp.feature.chat.presentation.generated.resources.image_saved_successfully
 import chirp.feature.chat.presentation.generated.resources.today
 import com.plcoding.chat.domain.chat.ChatConnectionClient
 import com.plcoding.chat.domain.chat.ChatRepository
+import com.plcoding.chat.domain.message.MessageAttachmentRepository
 import com.plcoding.chat.domain.message.MessageRepository
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ConnectionState
@@ -18,6 +21,7 @@ import com.plcoding.chat.presentation.mappers.toUi
 import com.plcoding.chat.presentation.mappers.toUiList
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.util.toFile
+import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import com.plcoding.core.domain.auth.SessionStorage
 import com.plcoding.core.domain.media.File
 import com.plcoding.core.domain.util.DataErrorException
@@ -51,6 +55,7 @@ class ChatDetailViewModel(
     private val sessionStorage: SessionStorage,
     private val messageRepository: MessageRepository,
     private val connectionClient: ChatConnectionClient,
+    private val messageAttachmentRepository: MessageAttachmentRepository
 ) : ViewModel() {
 
     private val eventChannel = Channel<ChatDetailEvent>()
@@ -151,6 +156,9 @@ class ChatDetailViewModel(
             ChatDetailAction.OnDismissErrorDialog -> dismissError()
             ChatDetailAction.OnDismissImagePreview -> dismissImagePreview()
             is ChatDetailAction.OnAttachmentClick -> showAttachmentPreview(action.data)
+            is ChatDetailAction.OnAttachmentLongClick -> onAttachmentLongClick(action.attachment)
+            ChatDetailAction.OnDismissAttachmentMenu -> onDismissAttachmentMenu()
+            is ChatDetailAction.OnSaveAttachmentClick -> downloadAttachment(action.attachment)
             else -> Unit
         }
     }
@@ -159,6 +167,36 @@ class ChatDetailViewModel(
         when (event) {
             is ChatDetailEvent.OnError -> showError(event.error)
             else -> Unit
+        }
+    }
+
+    private fun downloadAttachment(attachment: MessageAttachmentUi) {
+        onDismissAttachmentMenu()
+        viewModelScope.launch {
+            messageAttachmentRepository
+                .downloadAttachment(attachment.url)
+                .onSuccess {
+                    eventChannel.send(ChatDetailEvent.OnError(UiText.Resource(Res.string.image_saved_successfully)))
+                }
+                .onFailure {
+                    eventChannel.send(ChatDetailEvent.OnError(UiText.Resource(Res.string.error_saving_image)))
+                }
+        }
+    }
+
+    private fun onAttachmentLongClick(attachment: MessageAttachmentUi) {
+        _state.update {
+            it.copy(
+                attachmentWithOpenMenu = attachment
+            )
+        }
+    }
+
+    private fun onDismissAttachmentMenu() {
+        _state.update {
+            it.copy(
+                attachmentWithOpenMenu = null
+            )
         }
     }
 

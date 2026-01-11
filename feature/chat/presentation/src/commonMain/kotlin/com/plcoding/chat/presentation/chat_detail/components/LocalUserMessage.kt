@@ -38,6 +38,7 @@ fun LocalUserMessage(
     onDeleteClick: () -> Unit,
     onRetryClick: () -> Unit,
     onAttachmentClick: (MessageAttachmentUi) -> Unit,
+    onAttachmentLongClick: (MessageAttachmentUi) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -62,6 +63,7 @@ fun LocalUserMessage(
                     onMessageLongClick()
                 },
                 onAttachmentClick = onAttachmentClick,
+                onAttachmentLongClick = onAttachmentLongClick,
             )
 
             ChirpDropDownMenu(

@@ -22,4 +22,5 @@ expect class UploaderMessageAttachmentService : MessageAttachmentService {
         onFailure: suspend () -> Unit
     )
 
+    override suspend fun downloadAttachment(url: String): Result<ByteArray, DataError.Remote>
 }

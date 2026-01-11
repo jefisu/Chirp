@@ -2,7 +2,6 @@ package com.plcoding.core.designsystem.components.chat
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -52,7 +51,8 @@ fun ChirpChatBubble(
     messageStatus: @Composable (() -> Unit)? = null,
     triangleSize: Dp = 16.dp,
     onLongClick: (() -> Unit)? = null,
-    onAttachmentClick: ((MessageAttachmentUi) -> Unit)? = null
+    onAttachmentClick: ((MessageAttachmentUi) -> Unit)? = null,
+    onAttachmentLongClick: ((MessageAttachmentUi) -> Unit)? = null
 ) {
     val padding = 12.dp
 
@@ -120,6 +120,7 @@ fun ChirpChatBubble(
         AttachedFilesContent(
             attachments = attachments,
             onAttachmentClick = onAttachmentClick,
+            onAttachmentLongClick = onAttachmentLongClick
         )
         messageStatus?.invoke()
     }
@@ -129,6 +130,7 @@ fun ChirpChatBubble(
 private fun AttachedFilesContent(
     attachments: List<MessageAttachmentUi>,
     onAttachmentClick: ((MessageAttachmentUi) -> Unit)?,
+    onAttachmentLongClick: ((MessageAttachmentUi) -> Unit)?,
     modifier: Modifier = Modifier,
     limitVisible: Int = 5,
     itemSize: Dp = 52.dp
@@ -159,7 +161,8 @@ private fun AttachedFilesContent(
                         contentBytes = attachment.contentBytes,
                         isUploading = attachment.status != MessageAttachmentUploadStatusUi.UPLOADED,
                         modifier = attachmentModifier,
-                        onClick = { onAttachmentClick?.invoke(attachment) }
+                        onClick = { onAttachmentClick?.invoke(attachment) },
+                        onLongClick = { onAttachmentLongClick?.invoke(attachment) }
                     )
                 }
 
@@ -204,7 +207,8 @@ private fun ChatImageAttachment(
     contentBytes: ByteArray?,
     isUploading: Boolean,
     modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null
 ) {
     Box(modifier = modifier) {
         Image(
@@ -213,9 +217,10 @@ private fun ChatImageAttachment(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .matchParentSize()
-                .clickable(
-                    enabled = onClick != null && !isUploading,
-                    onClick = { onClick?.invoke() }
+                .combinedClickable(
+                    enabled = !isUploading,
+                    onClick = { onClick?.invoke() },
+                    onLongClick = { onLongClick?.invoke() }
                 )
         )
         Image(
