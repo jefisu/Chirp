@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -22,11 +23,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import coil3.compose.AsyncImagePainter
+import com.plcoding.core.designsystem.components.dialogs.ChirpAdaptiveDialog
 import com.plcoding.core.designsystem.theme.ChirpBase0
 import com.plcoding.core.designsystem.theme.ChirpBase900
 import com.plcoding.core.presentation.util.DeviceConfiguration
@@ -37,6 +37,7 @@ import net.engawapg.lib.zoomable.zoomable
 
 @Composable
 fun ImagePreviewDialog(
+    isVisible: Boolean,
     painter: AsyncImagePainter,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -61,11 +62,13 @@ fun ImagePreviewDialog(
         zoomScale = zoomState.scale
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false
-        )
+    LaunchedEffect(isVisible) {
+        if (!isVisible) zoomState.reset()
+    }
+
+    ChirpAdaptiveDialog(
+        isVisible = isVisible,
+        onDismiss = onDismiss
     ) {
         Box(
             modifier = modifier

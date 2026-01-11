@@ -205,14 +205,13 @@ fun ChatDetailScreen(
         )
     }
 
-    if (state.attachmentPreviewData != null) {
-        ImagePreviewDialog(
-            painter = rememberAsyncImagePainter(state.attachmentPreviewData),
-            onDismiss = {
-                onAction(ChatDetailAction.OnDismissImagePreview)
-            }
-        )
-    }
+    ImagePreviewDialog(
+        isVisible = state.attachmentPreviewData != null,
+        painter = rememberAsyncImagePainter(state.attachmentPreviewData),
+        onDismiss = {
+            onAction(ChatDetailAction.OnDismissImagePreview)
+        }
+    )
 
     LaunchedEffect(messageListState) {
         snapshotFlow {
@@ -269,7 +268,10 @@ fun ChatDetailScreen(
                 target = dragAndDropTarget
             )
             .blur(
-                radius = if (state.attachmentWithOpenMenu != null) 20.dp else 0.dp
+                radius = when {
+                    state.attachmentPreviewData != null || state.attachmentWithOpenMenu != null -> 20.dp
+                    else -> 0.dp
+                }
             ),
         containerColor = if (!configuration.isWideScreen) {
             MaterialTheme.colorScheme.surface
