@@ -50,10 +50,14 @@ class OfflineFirstMessageAttachmentRepository(
             fileStore.saveFile(file.bytes, uniqueFileName)
 
             val attachmentId = Uuid.random().toString()
+            val type = MessageAttachmentType.fromMimeType(mimeType) ?: run {
+                logger.error("Invalid mime type: $mimeType from File: ${file.name}")
+                return emptyList()
+            }
             val messageAttachment = MessageAttachment(
                 id = attachmentId,
                 url = localPath,
-                type = MessageAttachmentType.fromMimeType(mimeType),
+                type = type,
                 status = MessageAttachmentUploadStatus.PENDING
             )
 
@@ -171,10 +175,14 @@ class OfflineFirstMessageAttachmentRepository(
             bytes = byteArrayOf()
         )
 
+        val type = MessageAttachmentType.fromMimeType(mimeType) ?: run {
+            logger.error("Invalid mime type: $mimeType from URL: ${entity.publicUrl}")
+            return Result.Failure(DataError.Local.NOT_FOUND)
+        }
         val messageAttachment = MessageAttachment(
             id = entity.attachmentId,
             url = currentPath,
-            type = MessageAttachmentType.fromMimeType(mimeType),
+            type = type,
             status = MessageAttachmentUploadStatus.PENDING
         )
 
