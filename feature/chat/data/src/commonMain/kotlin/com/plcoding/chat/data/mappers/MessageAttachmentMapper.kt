@@ -1,6 +1,7 @@
 package com.plcoding.chat.data.mappers
 
 import com.plcoding.chat.data.dto.MessageAttachmentDto
+import com.plcoding.chat.data.dto.websocket.IncomingWebSocketDto
 import com.plcoding.chat.database.entities.AttachmentUploadStatus
 import com.plcoding.chat.database.entities.MessageAttachmentEntity
 import com.plcoding.chat.database.entities.PendingAttachmentEntity
@@ -89,4 +90,16 @@ fun PendingAttachment.toPendingAttachmentEntity(
         localPath = messageAttachment.url,
         publicUrl = publicUrl
     )
+}
+
+fun IncomingWebSocketDto.NewMessageDto.toMessageAttachmentsEntities(): List<MessageAttachmentEntity> {
+    return attachments.map {
+        MessageAttachmentEntity(
+            id = it.id,
+            url = it.url,
+            type = it.type,
+            status = AttachmentUploadStatus.UPLOADED,
+            messageId = this.id
+        )
+    }
 }

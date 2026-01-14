@@ -5,6 +5,7 @@ import com.plcoding.chat.data.dto.websocket.IncomingWebSocketType
 import com.plcoding.chat.data.dto.websocket.WebSocketMessageDto
 import com.plcoding.chat.data.mappers.toChatMessage
 import com.plcoding.chat.data.mappers.toChatMessageEntity
+import com.plcoding.chat.data.mappers.toMessageAttachmentsEntities
 import com.plcoding.chat.data.network.KtorWebSocketConnector
 import com.plcoding.chat.database.ChirpChatDatabase
 import com.plcoding.chat.domain.chat.ChatConnectionClient
@@ -92,7 +93,16 @@ class WebSocketChatConnectionClient(
         }
 
         val entity = message.toChatMessageEntity()
-        database.chatMessageDao.upsertMessage(entity)
+        val serverAttachments = message.toMessageAttachmentsEntities()
+
+        database.chatMessageDao.saveFetchedMessages(
+            chatId = message.chatId,
+            serverMessages = listOf(entity),
+            allServerAttachments = serverAttachments,
+            pageSize = 1,
+            shouldSync = false,
+            messageAttachmentDao = database.messageAttachmentDao
+        )
     }
 
     private suspend fun updateProfilePicture(message: IncomingWebSocketDto.ProfilePictureUpdated) {
