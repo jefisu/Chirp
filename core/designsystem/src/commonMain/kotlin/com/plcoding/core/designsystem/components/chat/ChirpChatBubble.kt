@@ -2,8 +2,10 @@ package com.plcoding.core.designsystem.components.chat
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -22,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +37,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import com.plcoding.core.designsystem.theme.ChirpBase100
 import com.plcoding.core.designsystem.theme.ChirpTheme
@@ -210,27 +216,65 @@ private fun ChatImageAttachment(
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null
 ) {
+    val remotePainter = rememberAsyncImagePainter(url)
+    val remotePainterState by remotePainter.state.collectAsStateWithLifecycle()
+
     Box(modifier = modifier) {
-        Image(
-            painter = rememberAsyncImagePainter(model = url),
-            contentDescription = url,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .matchParentSize()
-                .combinedClickable(
-                    enabled = !isUploading,
-                    onClick = { onClick?.invoke() },
-                    onLongClick = { onLongClick?.invoke() }
+        when (remotePainterState) {
+            is AsyncImagePainter.State.Success -> {
+                Image(
+                    painter = remotePainter,
+                    contentDescription = url,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .matchParentSize()
+                        .combinedClickable(
+                            enabled = !isUploading,
+                            onClick = { onClick?.invoke() },
+                            onLongClick = { onLongClick?.invoke() }
+                        )
                 )
-        )
-        Image(
-            painter = rememberAsyncImagePainter(contentBytes),
-            contentDescription = url,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .matchParentSize()
-                .darkenOverlay(enabled = isUploading)
-        )
+            }
+
+            is AsyncImagePainter.State.Loading -> {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier
+                        .matchParentSize()
+                        .darkenOverlay(enabled = true)
+                        .scale(0.5f)
+                )
+            }
+
+            else -> {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .darkenOverlay(
+                            enabled = true,
+                            alpha = if (isSystemInDarkTheme()) 0.4f else 0.15f
+                        )
+                        .clickable { remotePainter.restart() }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CloudDownload,
+                        contentDescription = "Retry download",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
+        }
+        contentBytes?.let {
+            Image(
+                painter = rememberAsyncImagePainter(it),
+                contentDescription = url,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .matchParentSize()
+                    .darkenOverlay(enabled = isUploading)
+            )
+        }
     }
 }
 
