@@ -28,6 +28,8 @@ import chirp.feature.chat.presentation.generated.resources.sent_n_images
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
 import com.plcoding.chat.domain.models.MessageAttachmentType
+import com.plcoding.chat.presentation.chat_detail.components.TypingFormatter
+import com.plcoding.chat.presentation.chat_detail.components.TypingIndicator
 import com.plcoding.chat.presentation.components.ChatItemHeaderRow
 import com.plcoding.chat.presentation.model.ChatUi
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
@@ -41,6 +43,7 @@ import kotlin.time.Clock
 fun ChatListItemUi(
     chat: ChatUi,
     isSelected: Boolean,
+    typingUsers: List<String>,
     modifier: Modifier = Modifier
 ) {
     val isGroupChat = chat.otherParticipants.size > 1
@@ -69,7 +72,11 @@ fun ChatListItemUi(
                     .fillMaxWidth()
             )
 
-            if (chat.lastMessage != null) {
+            if (typingUsers.isNotEmpty()) {
+                TypingIndicator(
+                    typingText = TypingFormatter.format(typingUsers)?.asString()
+                )
+            } else if (chat.lastMessage != null) {
                 val chatMessage = chat.lastMessage
                 val imageCount = chatMessage.attachments
                     .filter { it.type == MessageAttachmentType.IMAGE }
@@ -117,6 +124,7 @@ fun ChatListItemUiPreview() {
     ChirpTheme(darkTheme = true) {
         ChatListItemUi(
             isSelected = true,
+            typingUsers = emptyList(),
             modifier = Modifier
                 .fillMaxWidth(),
             chat = ChatUi(

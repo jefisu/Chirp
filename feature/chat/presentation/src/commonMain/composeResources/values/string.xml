@@ -63,4 +63,8 @@
     <string name="error_invalid_file_type">This file type is not supported.</string>
     <string name="image_saved_successfully">Image saved successfully</string>
     <string name="error_saving_image">Error saving image</string>
+
+    <string name="is_typing">%1$s is typing...</string>
+    <string name="are_typing">%1$s are typing...</string>
+    <string name="several_people_are_typing">Several people are typing...</string>
 </resources>

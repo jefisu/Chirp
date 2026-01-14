@@ -3,13 +3,13 @@
 package com.plcoding.chat.data.message
 
 import com.plcoding.chat.data.dto.websocket.OutgoingWebSocketDto
-import com.plcoding.chat.data.dto.websocket.WebSocketMessageDto
 import com.plcoding.chat.data.mappers.toChatMessageEntity
 import com.plcoding.chat.data.mappers.toMessageAttachmentDto
 import com.plcoding.chat.data.mappers.toMessageAttachmentEntity
 import com.plcoding.chat.data.mappers.toMessageAttachmentsEntity
 import com.plcoding.chat.data.mappers.toMessageWithSender
 import com.plcoding.chat.data.mappers.toPendingAttachmentEntity
+import com.plcoding.chat.data.mappers.wrapOutgoingMessage
 import com.plcoding.chat.data.network.KtorWebSocketConnector
 import com.plcoding.chat.database.ChirpChatDatabase
 import com.plcoding.chat.database.entities.AttachmentUploadStatus
@@ -40,9 +40,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -294,7 +291,7 @@ class OfflineFirstMessageRepository(
             )
 
             webSocketConnector
-                .sendMessage(outgoingNewMessage.toJsonPayload())
+                .sendMessage(json.wrapOutgoingMessage(outgoingNewMessage))
                 .onSuccess {
                     database.chatMessageDao.updateDeliveryStatus(
                         messageId = messageWithSender.message.id,
@@ -330,20 +327,5 @@ class OfflineFirstMessageRepository(
             shouldSync = shouldSync,
             messageAttachmentDao = database.messageAttachmentDao
         )
-    }
-
-    private fun OutgoingWebSocketDto.NewMessage.toJsonPayload(): String {
-        val payloadJson = json
-            .encodeToJsonElement(this)
-            .jsonObject
-            .toMutableMap()
-            .apply {
-                remove("type")
-            }
-        val webSocketMessage = WebSocketMessageDto(
-            type = type.name,
-            payload = json.encodeToString(JsonObject(payloadJson))
-        )
-        return json.encodeToString(webSocketMessage)
     }
 }

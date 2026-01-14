@@ -5,7 +5,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 enum class OutgoingWebSocketType {
-    NEW_MESSAGE
+    NEW_MESSAGE,
+    TYPING_EVENT
 }
 
 @Serializable
@@ -20,5 +21,11 @@ sealed class OutgoingWebSocketDto(
         val content: String?,
         @SerialName("attachedFiles")
         val attachments: List<MessageAttachmentDto>
-    ): OutgoingWebSocketDto(OutgoingWebSocketType.NEW_MESSAGE)
+    ) : OutgoingWebSocketDto(OutgoingWebSocketType.NEW_MESSAGE)
+
+    @Serializable
+    data class TypingEvent(
+        val chatId: String,
+        val isTyping: Boolean
+    ) : OutgoingWebSocketDto(OutgoingWebSocketType.TYPING_EVENT)
 }

@@ -1,8 +1,11 @@
 package com.plcoding.chat.presentation.chat_list_detail
 
+import com.plcoding.chat.presentation.util.TypingUsersByChat
+
 data class ChatListDetailState(
     val selectedChatId: String? = null,
-    val dialogState: DialogState = DialogState.Hidden
+    val dialogState: DialogState = DialogState.Hidden,
+    val typingUsersByChat: TypingUsersByChat = emptyMap()
 )
 
 sealed interface DialogState {

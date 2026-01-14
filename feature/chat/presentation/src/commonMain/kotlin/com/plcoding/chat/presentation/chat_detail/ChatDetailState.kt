@@ -4,6 +4,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import com.plcoding.chat.domain.models.ConnectionState
 import com.plcoding.chat.presentation.model.ChatUi
 import com.plcoding.chat.presentation.model.MessageUi
+import com.plcoding.chat.presentation.util.TypingUsers
 import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import com.plcoding.core.presentation.media.PickedImageData
 import com.plcoding.core.presentation.util.UiText
@@ -26,6 +27,7 @@ data class ChatDetailState(
     val connectionState: ConnectionState = ConnectionState.DISCONNECTED,
     val imagesSelected: List<PickedImageData> = emptyList(),
     val attachmentPreviewData: Any? = null,
+    val typingUsers: TypingUsers = emptyMap()
 )
 
 data class BannerState(

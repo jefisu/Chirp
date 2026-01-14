@@ -2,10 +2,13 @@ package com.plcoding.chat.data.chat
 
 import com.plcoding.chat.data.dto.websocket.IncomingWebSocketDto
 import com.plcoding.chat.data.dto.websocket.IncomingWebSocketType
+import com.plcoding.chat.data.dto.websocket.OutgoingWebSocketDto
 import com.plcoding.chat.data.dto.websocket.WebSocketMessageDto
 import com.plcoding.chat.data.mappers.toChatMessage
 import com.plcoding.chat.data.mappers.toChatMessageEntity
 import com.plcoding.chat.data.mappers.toMessageAttachmentsEntities
+import com.plcoding.chat.data.mappers.toTypingEvent
+import com.plcoding.chat.data.mappers.wrapOutgoingMessage
 import com.plcoding.chat.data.network.KtorWebSocketConnector
 import com.plcoding.chat.database.ChirpChatDatabase
 import com.plcoding.chat.domain.chat.ChatConnectionClient
@@ -15,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
@@ -47,6 +51,24 @@ class WebSocketChatConnectionClient(
 
     override val connectionState = webSocketConnector.connectionState
 
+    override val typingEvents = webSocketConnector
+        .messages
+        .mapNotNull { parseIncomingMessage(it) }
+        .filterIsInstance<IncomingWebSocketDto.TypingEventDto>()
+        .map { it.toTypingEvent() }
+        .shareIn(
+            applicationScope,
+            SharingStarted.WhileSubscribed(5000)
+        )
+
+    override suspend fun sendTypingEvent(chatId: String, isTyping: Boolean) {
+        val dto = OutgoingWebSocketDto.TypingEvent(
+            chatId = chatId,
+            isTyping = isTyping
+        )
+        webSocketConnector.sendMessage(json.wrapOutgoingMessage(dto))
+    }
+
     private fun parseIncomingMessage(message: WebSocketMessageDto): IncomingWebSocketDto? {
         return when (message.type) {
             IncomingWebSocketType.NEW_MESSAGE.name -> {
@@ -65,6 +87,10 @@ class WebSocketChatConnectionClient(
                 json.decodeFromString<IncomingWebSocketDto.ChatParticipantsChangedDto>(message.payload)
             }
 
+            IncomingWebSocketType.TYPING_EVENT.name -> {
+                json.decodeFromString<IncomingWebSocketDto.TypingEventDto>(message.payload)
+            }
+
             else -> null
         }
     }
@@ -75,6 +101,7 @@ class WebSocketChatConnectionClient(
             is IncomingWebSocketDto.MessageDeletedDto -> deleteMessage(message)
             is IncomingWebSocketDto.NewMessageDto -> handleNewMessage(message)
             is IncomingWebSocketDto.ProfilePictureUpdated -> updateProfilePicture(message)
+            is IncomingWebSocketDto.TypingEventDto -> Unit
         }
     }
 

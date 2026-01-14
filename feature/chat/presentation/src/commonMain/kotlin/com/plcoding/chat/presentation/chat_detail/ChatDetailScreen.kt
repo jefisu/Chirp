@@ -51,8 +51,6 @@ import chirp.feature.chat.presentation.generated.resources.drop_images_to_share
 import chirp.feature.chat.presentation.generated.resources.no_chat_selected
 import chirp.feature.chat.presentation.generated.resources.select_a_chat
 import coil3.compose.rememberAsyncImagePainter
-import com.plcoding.chat.domain.models.ChatMessage
-import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
 import com.plcoding.chat.presentation.chat_detail.components.AttachmentContextMenu
 import com.plcoding.chat.presentation.chat_detail.components.ChatDetailHeader
 import com.plcoding.chat.presentation.chat_detail.components.DateChip
@@ -61,15 +59,12 @@ import com.plcoding.chat.presentation.chat_detail.components.MessageBannerListen
 import com.plcoding.chat.presentation.chat_detail.components.MessageBox
 import com.plcoding.chat.presentation.chat_detail.components.MessageList
 import com.plcoding.chat.presentation.chat_detail.components.PaginationScrollListener
+import com.plcoding.chat.presentation.chat_detail.components.TypingFormatter
+import com.plcoding.chat.presentation.chat_detail.components.TypingIndicator
 import com.plcoding.chat.presentation.components.ChatHeader
 import com.plcoding.chat.presentation.components.EmptySection
-import com.plcoding.chat.presentation.model.ChatUi
-import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.profile.components.DragAndDropOverlay
-import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
-import com.plcoding.core.designsystem.components.chat.MessageAttachmentTypeUi
-import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
-import com.plcoding.core.designsystem.components.chat.MessageAttachmentUploadStatusUi
+import com.plcoding.chat.presentation.util.ChatPreviewData
 import com.plcoding.core.designsystem.components.dialogs.ErrorDialog
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
@@ -77,7 +72,6 @@ import com.plcoding.core.presentation.media.ImagePickerMode
 import com.plcoding.core.presentation.media.rememberDragAndDropTarget
 import com.plcoding.core.presentation.media.rememberImagePickerLauncher
 import com.plcoding.core.presentation.util.ObserveAsEvents
-import com.plcoding.core.presentation.util.UiText
 import com.plcoding.core.presentation.util.clearFocusOnTap
 import com.plcoding.core.presentation.util.currentDeviceConfiguration
 import kotlinx.coroutines.delay
@@ -86,9 +80,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 @Composable
 fun ChatDetailRoot(
@@ -172,7 +164,7 @@ fun ChatDetailScreen(
     val realMessageItemCount = remember(state.messages) {
         state
             .messages
-            .filter { it is MessageUi.LocalUserMessage || it is MessageUi.OtherUserMessage }
+            .filter { it is com.plcoding.chat.presentation.model.MessageUi.LocalUserMessage || it is com.plcoding.chat.presentation.model.MessageUi.OtherUserMessage }
             .size
     }
 
@@ -370,6 +362,17 @@ fun ChatDetailScreen(
                                 .weight(1f)
                         )
 
+                        TypingIndicator(
+                            typingText = TypingFormatter
+                                .format(state.typingUsers.values.toList())
+                                ?.asString(),
+                            modifier = Modifier
+                                .padding(
+                                    vertical = if (configuration.isMobile) 8.dp else 20.dp,
+                                    horizontal = if (configuration.isMobile) 16.dp else 24.dp
+                                )
+                        )
+
                         AnimatedVisibility(
                             visible = !configuration.isWideScreen
                         ) {
@@ -499,78 +502,48 @@ private fun ChatDetailEmptyPreview() {
 
 @Preview
 @Composable
-private fun ChatDetailMessagesPreview() {
-    val attachments = ('a'..'f').map {
-        MessageAttachmentUi(
-            id = it.toString(),
-            url = it.toString(),
-            type = MessageAttachmentTypeUi.IMAGE,
-            status = MessageAttachmentUploadStatusUi.PENDING
-        )
-    }
-
+private fun ChatDetailTypingPreview() {
     ChirpTheme(darkTheme = true) {
         ChatDetailScreen(
             messageListState = rememberLazyListState(),
             state = ChatDetailState(
-                messageTextFieldState = rememberTextFieldState(
-                    initialText = "This is a new message!"
-                ),
+                chatUi = ChatPreviewData.chatUi,
+                typingUsers = ChatPreviewData.typingUsers
+            ),
+            isDetailPresent = true,
+            onAction = {},
+            snackbarState = remember { SnackbarHostState() },
+            onEvent = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun ChatDetailMessagesWithTypingPreview() {
+    ChirpTheme(darkTheme = true) {
+        ChatDetailScreen(
+            messageListState = rememberLazyListState(),
+            state = ChatPreviewData.stateWithMessagesAndTyping,
+            isDetailPresent = true,
+            onAction = {},
+            snackbarState = remember { SnackbarHostState() },
+            onEvent = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun ChatDetailMessagesPreview() {
+    ChirpTheme(darkTheme = true) {
+        ChatDetailScreen(
+            messageListState = rememberLazyListState(),
+            state = ChatDetailState(
+                chatUi = ChatPreviewData.chatUi,
+                messages = ChatPreviewData.messages,
                 canSendMessage = true,
-                chatUi = ChatUi(
-                    id = "1",
-                    localParticipant = ChatParticipantUi(
-                        id = "1",
-                        username = "Philipp",
-                        initials = "PH",
-                    ),
-                    otherParticipants = listOf(
-                        ChatParticipantUi(
-                            id = "2",
-                            username = "Cinderella",
-                            initials = "CI",
-                        ),
-                        ChatParticipantUi(
-                            id = "3",
-                            username = "Josh",
-                            initials = "JO",
-                        )
-                    ),
-                    lastMessage = ChatMessage(
-                        id = "1",
-                        chatId = "1",
-                        content = "This is a last chat message that was sent by Philipp " +
-                                "and goes over multiple lines to showcase the ellipsis",
-                        createdAt = Clock.System.now(),
-                        senderId = "1",
-                        deliveryStatus = ChatMessageDeliveryStatus.SENT,
-                        attachments = emptyList(),
-                    ),
-                    lastMessageSenderUsername = "Philipp"
-                ),
-                messages = (1..20).map {
-                    if (it % 2 == 0) {
-                        MessageUi.LocalUserMessage(
-                            id = Uuid.random().toString(),
-                            content = "Hello world!",
-                            deliveryStatus = ChatMessageDeliveryStatus.SENT,
-                            formattedSentTime = UiText.DynamicString("Friday, Aug 20"),
-                            attachments = if (it == 2) attachments else emptyList(),
-                        )
-                    } else {
-                        MessageUi.OtherUserMessage(
-                            id = Uuid.random().toString(),
-                            content = "Hello world!",
-                            sender = ChatParticipantUi(
-                                id = Uuid.random().toString(),
-                                username = "John",
-                                initials = "JO"
-                            ),
-                            formattedSentTime = UiText.DynamicString("Friday, Aug 20"),
-                            attachments = emptyList(),
-                        )
-                    }
-                }
+                messageTextFieldState = rememberTextFieldState(initialText = "Hello world!")
             ),
             isDetailPresent = true,
             onAction = {},

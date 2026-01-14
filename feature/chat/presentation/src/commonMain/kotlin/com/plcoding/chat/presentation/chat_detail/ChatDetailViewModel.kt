@@ -17,6 +17,7 @@ import com.plcoding.chat.domain.message.MessageRepository
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ConnectionState
 import com.plcoding.chat.domain.models.OutgoingNewMessage
+import com.plcoding.chat.presentation.chat_list_detail.ChatListDetailState
 import com.plcoding.chat.presentation.mappers.toUi
 import com.plcoding.chat.presentation.mappers.toUiList
 import com.plcoding.chat.presentation.model.MessageUi
@@ -35,6 +36,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
@@ -55,7 +57,8 @@ class ChatDetailViewModel(
     private val sessionStorage: SessionStorage,
     private val messageRepository: MessageRepository,
     private val connectionClient: ChatConnectionClient,
-    private val messageAttachmentRepository: MessageAttachmentRepository
+    private val messageAttachmentRepository: MessageAttachmentRepository,
+    private val sharedState: StateFlow<ChatListDetailState>
 ) : ViewModel() {
 
     private val eventChannel = Channel<ChatDetailEvent>()
@@ -100,16 +103,20 @@ class ChatDetailViewModel(
         _state,
         chatInfoFlow,
         sessionStorage.observeAuthInfo(),
-        temporaryAttachmentFiles
-    ) { currentState, chatInfo, authInfo, temporaryFiles ->
+        temporaryAttachmentFiles,
+        sharedState
+    ) { currentState, chatInfo, authInfo, temporaryFiles, sharedState ->
         if (authInfo == null) {
             return@combine ChatDetailState()
         }
 
+        val typingUsers = _chatId.value?.let { sharedState.typingUsersByChat[it] } ?: emptyMap()
+
         currentState.copy(
             chatUi = chatInfo.chat.toUi(authInfo.user.id),
             messages = chatInfo.messages
-                .toUiList(authInfo.user.id, temporaryFiles)
+                .toUiList(authInfo.user.id, temporaryFiles),
+            typingUsers = typingUsers
         )
     }
 
@@ -126,6 +133,7 @@ class ChatDetailViewModel(
                 observeConnectionState()
                 observeChatMessages()
                 observeCanSendMessage()
+                observeOwnTypingStatus()
                 hasLoadedInitialData = true
             }
         }
@@ -348,6 +356,7 @@ class ChatDetailViewModel(
         ) return
 
         viewModelScope.launch {
+            connectionClient.sendTypingEvent(currentChatId, false)
             messageRepository
                 .sendMessage(
                     OutgoingNewMessage(
@@ -419,6 +428,19 @@ class ChatDetailViewModel(
                     it.copy(
                         connectionState = connectionState
                     )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeOwnTypingStatus() {
+        snapshotFlow { _state.value.messageTextFieldState.text.toString() }
+            .onEach { text ->
+                val chatId = _chatId.value ?: return@onEach
+                if (text.isEmpty()) {
+                    connectionClient.sendTypingEvent(chatId, false)
+                } else {
+                    connectionClient.sendTypingEvent(chatId, true)
                 }
             }
             .launchIn(viewModelScope)
@@ -518,12 +540,26 @@ class ChatDetailViewModel(
     }
 
     private fun switchChat(chatId: String?) {
-        _chatId.update { chatId }
         viewModelScope.launch {
+            val previousChatId = _chatId.value
+            if (previousChatId != null) {
+                connectionClient.sendTypingEvent(previousChatId, false)
+            }
+
+            _chatId.update { chatId }
+
             chatId?.let {
                 chatRepository.fetchChatById(chatId)
             }
         }
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        _chatId.value?.let { chatId ->
+            viewModelScope.launch {
+                connectionClient.sendTypingEvent(chatId, false)
+            }
+        }
+    }
 }

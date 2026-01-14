@@ -178,9 +178,11 @@ fun ChatListScreen(
                             items = state.chats,
                             key = { it.id }
                         ) { chatUi ->
+                            val typingUsers = state.typingUsersByChat[chatUi.id]?.values?.toList().orEmpty()
                             ChatListItemUi(
                                 chat = chatUi,
                                 isSelected = chatUi.id == state.selectedChatId,
+                                typingUsers = typingUsers,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {

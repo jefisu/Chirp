@@ -16,4 +16,6 @@ val chatPresentationModule = module {
     viewModelOf(::ChatDetailViewModel)
     viewModelOf(::ManageChatViewModel)
     viewModelOf(::ProfileViewModel)
+
+    single { get<ChatListDetailViewModel>().state }
 }

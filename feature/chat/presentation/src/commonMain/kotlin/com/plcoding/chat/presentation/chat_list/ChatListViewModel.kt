@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.plcoding.chat.domain.chat.ChatRepository
 import com.plcoding.chat.domain.notification.DeviceTokenService
 import com.plcoding.chat.domain.participant.ChatParticipantRepository
+import com.plcoding.chat.presentation.chat_list_detail.ChatListDetailState
 import com.plcoding.chat.presentation.mappers.toUi
 import com.plcoding.core.domain.auth.AuthService
 import com.plcoding.core.domain.auth.SessionStorage
@@ -12,9 +13,9 @@ import com.plcoding.core.domain.util.onFailure
 import com.plcoding.core.domain.util.onSuccess
 import com.plcoding.core.presentation.util.toUiText
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onStart
@@ -28,7 +29,8 @@ class ChatListViewModel(
     private val sessionStorage: SessionStorage,
     private val deviceTokenService: DeviceTokenService,
     private val authService: AuthService,
-    private val chatParticipantRepository: ChatParticipantRepository
+    private val chatParticipantRepository: ChatParticipantRepository,
+    private val sharedState: StateFlow<ChatListDetailState>
 ) : ViewModel() {
 
     private val eventChannel = Channel<ChatListEvent>()
@@ -40,15 +42,17 @@ class ChatListViewModel(
     val state = combine(
         _state,
         repository.getChats(),
-        sessionStorage.observeAuthInfo()
-    ) { currentState, chats, authInfo ->
+        sessionStorage.observeAuthInfo(),
+        sharedState
+    ) { currentState, chats, authInfo, sharedState ->
         if(authInfo == null) {
             return@combine ChatListState()
         }
 
         currentState.copy(
             chats = chats.map { it.toUi(authInfo.user.id) },
-            localParticipant = authInfo.user.toUi()
+            localParticipant = authInfo.user.toUi(),
+            typingUsersByChat = sharedState.typingUsersByChat
         )
     }
         .onStart {
