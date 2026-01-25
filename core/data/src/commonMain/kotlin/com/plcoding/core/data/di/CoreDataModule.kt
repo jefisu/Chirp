@@ -1,7 +1,7 @@
 package com.plcoding.core.data.di
 
-import com.plcoding.core.data.auth.DataStoreSessionStorage
 import com.plcoding.core.data.auth.KtorAuthService
+import com.plcoding.core.data.auth.SecureSessionStorage
 import com.plcoding.core.data.logging.KermitLogger
 import com.plcoding.core.data.media.NativeImageCompressor
 import com.plcoding.core.data.networking.HttpClientFactory
@@ -23,6 +23,6 @@ val coreDataModule = module {
         HttpClientFactory(get(), get()).create(get())
     }
     singleOf(::KtorAuthService) bind AuthService::class
-    singleOf(::DataStoreSessionStorage) bind SessionStorage::class
+    singleOf(::SecureSessionStorage) bind SessionStorage::class
     singleOf(::NativeImageCompressor).bind<ImageCompressor>()
 }

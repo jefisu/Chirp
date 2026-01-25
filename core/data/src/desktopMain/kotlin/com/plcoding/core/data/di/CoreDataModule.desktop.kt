@@ -4,8 +4,10 @@ import com.plcoding.core.data.auth.createDataStore
 import com.plcoding.core.data.media.JvmFileStore
 import com.plcoding.core.data.media.NativeFileStore
 import com.plcoding.core.data.preferences.DataStoreThemePreferences
+import com.plcoding.core.data.security.NativeSecureStorage
 import com.plcoding.core.domain.media.FileStore
 import com.plcoding.core.domain.preferences.ThemePreferences
+import com.plcoding.core.domain.security.SecureStorage
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import org.koin.core.module.dsl.singleOf
@@ -16,6 +18,7 @@ actual val platformCoreDataModule = module {
     single { createDataStore() }
     single<HttpClientEngine> { OkHttp.create() }
     singleOf(::DataStoreThemePreferences) bind ThemePreferences::class
+    singleOf(::NativeSecureStorage).bind<SecureStorage>()
     singleOf(::JvmFileStore)
     singleOf(::NativeFileStore).bind<FileStore>()
 }
