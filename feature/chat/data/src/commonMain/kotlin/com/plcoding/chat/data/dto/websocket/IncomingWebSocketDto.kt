@@ -9,7 +9,10 @@ enum class IncomingWebSocketType {
     MESSAGE_DELETED,
     PROFILE_PICTURE_UPDATED,
     CHAT_PARTICIPANTS_CHANGED,
-    TYPING_EVENT
+    TYPING_EVENT,
+    CHAT_EVENT,
+    CHAT_DELETED,
+    REMOVED_FROM_CHAT
 }
 
 @Serializable
@@ -54,5 +57,33 @@ sealed interface IncomingWebSocketDto {
         val userName: String,
         val isTyping: Boolean,
         val type: IncomingWebSocketType = IncomingWebSocketType.TYPING_EVENT
+    ): IncomingWebSocketDto
+
+    @Serializable
+    data class ChatEventDto(
+        val chatId: String,
+        val eventId: String,
+        val eventType: String,
+        val actorUserId: String,
+        val actorUsername: String,
+        val targetUserId: String? = null,
+        val targetUsername: String? = null,
+        val createdAt: String,
+        val type: IncomingWebSocketType = IncomingWebSocketType.CHAT_EVENT
+    ): IncomingWebSocketDto
+
+    @Serializable
+    data class ChatDeletedDto(
+        val chatId: String,
+        val deletedByUserId: String,
+        val type: IncomingWebSocketType = IncomingWebSocketType.CHAT_DELETED
+    ): IncomingWebSocketDto
+
+    @Serializable
+    data class RemovedFromChatDto(
+        val chatId: String,
+        val removedByUserId: String,
+        val removedByUsername: String,
+        val type: IncomingWebSocketType = IncomingWebSocketType.REMOVED_FROM_CHAT
     ): IncomingWebSocketDto
 }

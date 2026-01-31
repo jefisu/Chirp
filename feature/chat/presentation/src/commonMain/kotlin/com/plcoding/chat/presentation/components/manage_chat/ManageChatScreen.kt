@@ -19,6 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import chirp.feature.chat.presentation.generated.resources.Res
 import chirp.feature.chat.presentation.generated.resources.cancel
+import chirp.feature.chat.presentation.generated.resources.remove
+import chirp.feature.chat.presentation.generated.resources.remove_member
+import chirp.feature.chat.presentation.generated.resources.remove_member_confirmation
 import com.plcoding.chat.presentation.components.ChatParticipantSearchTextSection
 import com.plcoding.chat.presentation.components.ChatParticipantsSelectionSection
 import com.plcoding.chat.presentation.components.ManageChatButtonSection
@@ -26,6 +29,7 @@ import com.plcoding.chat.presentation.components.ManageChatHeaderRow
 import com.plcoding.core.designsystem.components.brand.ChirpHorizontalDivider
 import com.plcoding.core.designsystem.components.buttons.ChirpButton
 import com.plcoding.core.designsystem.components.buttons.ChirpButtonStyle
+import com.plcoding.core.designsystem.components.dialogs.DestructiveConfirmationDialog
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.presentation.util.DeviceConfiguration
 import com.plcoding.core.presentation.util.clearFocusOnTap
@@ -91,8 +95,35 @@ fun ManageChatScreen(
             selectedParticipants = state.selectedChatParticipants,
             modifier = Modifier
                 .fillMaxWidth(),
-            searchResult = state.currentSearchResult
+            searchResult = state.currentSearchResult,
+            isCurrentUserAdmin = state.isCurrentUserAdmin,
+            creatorId = state.creatorId,
+            localUserId = state.localUserId,
+            onRemoveMemberClick = { userId ->
+                onAction(ManageChatAction.OnRemoveMemberClick(userId))
+            }
         )
+
+        val memberToRemove = state.memberToRemove
+        val memberToRemoveUsername = state.existingChatParticipants
+            .find { it.id == memberToRemove }?.username
+        if (memberToRemove != null && memberToRemoveUsername != null) {
+            DestructiveConfirmationDialog(
+                title = stringResource(Res.string.remove_member),
+                description = stringResource(Res.string.remove_member_confirmation, memberToRemoveUsername),
+                confirmButtonText = stringResource(Res.string.remove),
+                cancelButtonText = stringResource(Res.string.cancel),
+                onConfirmClick = {
+                    onAction(ManageChatAction.OnConfirmRemoveMember)
+                },
+                onCancelClick = {
+                    onAction(ManageChatAction.OnDismissRemoveMemberConfirmation)
+                },
+                onDismiss = {
+                    onAction(ManageChatAction.OnDismissRemoveMemberConfirmation)
+                }
+            )
+        }
         ChirpHorizontalDivider()
         ManageChatButtonSection(
             primaryButton = {

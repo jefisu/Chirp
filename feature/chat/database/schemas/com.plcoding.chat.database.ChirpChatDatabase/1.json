@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "c81ce957ec9be73bf19c1caf120e567b",
+    "identityHash": "9144a598e90e9e837f520e4ece5741d7",
     "entities": [
       {
         "tableName": "ChatEntity",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chatId` TEXT NOT NULL, `lastActivityAt` INTEGER NOT NULL, PRIMARY KEY(`chatId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chatId` TEXT NOT NULL, `lastActivityAt` INTEGER NOT NULL, `creatorId` TEXT NOT NULL, PRIMARY KEY(`chatId`))",
         "fields": [
           {
             "fieldPath": "chatId",
@@ -18,6 +18,12 @@
             "fieldPath": "lastActivityAt",
             "columnName": "lastActivityAt",
             "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "creatorId",
+            "columnName": "creatorId",
+            "affinity": "TEXT",
             "notNull": true
           }
         ],
@@ -339,6 +345,104 @@
             ]
           }
         ]
+      },
+      {
+        "tableName": "ChatEventEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`eventId` TEXT NOT NULL, `chatId` TEXT NOT NULL, `eventType` TEXT NOT NULL, `actorUserId` TEXT NOT NULL, `targetUserId` TEXT, `timestamp` INTEGER NOT NULL, PRIMARY KEY(`eventId`), FOREIGN KEY(`chatId`) REFERENCES `ChatEntity`(`chatId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "eventId",
+            "columnName": "eventId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chatId",
+            "columnName": "chatId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eventType",
+            "columnName": "eventType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "actorUserId",
+            "columnName": "actorUserId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetUserId",
+            "columnName": "targetUserId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "eventId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ChatEventEntity_chatId",
+            "unique": false,
+            "columnNames": [
+              "chatId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ChatEventEntity_chatId` ON `${TABLE_NAME}` (`chatId`)"
+          },
+          {
+            "name": "index_ChatEventEntity_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ChatEventEntity_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          },
+          {
+            "name": "index_ChatEventEntity_actorUserId",
+            "unique": false,
+            "columnNames": [
+              "actorUserId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ChatEventEntity_actorUserId` ON `${TABLE_NAME}` (`actorUserId`)"
+          },
+          {
+            "name": "index_ChatEventEntity_targetUserId",
+            "unique": false,
+            "columnNames": [
+              "targetUserId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ChatEventEntity_targetUserId` ON `${TABLE_NAME}` (`targetUserId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "ChatEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "chatId"
+            ],
+            "referencedColumns": [
+              "chatId"
+            ]
+          }
+        ]
       }
     ],
     "views": [
@@ -349,7 +453,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c81ce957ec9be73bf19c1caf120e567b')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9144a598e90e9e837f520e4ece5741d7')"
     ]
   }
 }

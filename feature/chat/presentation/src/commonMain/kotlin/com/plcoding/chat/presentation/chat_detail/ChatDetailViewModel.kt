@@ -14,12 +14,12 @@ import com.plcoding.chat.domain.chat.ChatConnectionClient
 import com.plcoding.chat.domain.chat.ChatRepository
 import com.plcoding.chat.domain.message.MessageAttachmentRepository
 import com.plcoding.chat.domain.message.MessageRepository
-import com.plcoding.chat.domain.models.ChatMessage
+import com.plcoding.chat.domain.models.ChatHistoryItem
 import com.plcoding.chat.domain.models.ConnectionState
 import com.plcoding.chat.domain.models.OutgoingNewMessage
 import com.plcoding.chat.presentation.chat_list_detail.ChatListDetailState
 import com.plcoding.chat.presentation.mappers.toUi
-import com.plcoding.chat.presentation.mappers.toUiList
+import com.plcoding.chat.presentation.mappers.toUiListWithEvents
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.util.toFile
 import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
@@ -68,7 +68,7 @@ class ChatDetailViewModel(
 
     private var hasLoadedInitialData = false
 
-    private var currentPaginator: Paginator<String?, ChatMessage>? = null
+    private var currentPaginator: Paginator<String?, ChatHistoryItem>? = null
 
     private val temporaryAttachmentFiles = MutableStateFlow(emptyMap<String, File>())
 
@@ -114,8 +114,12 @@ class ChatDetailViewModel(
 
         currentState.copy(
             chatUi = chatInfo.chat.toUi(authInfo.user.id),
-            messages = chatInfo.messages
-                .toUiList(authInfo.user.id, temporaryFiles),
+            messages = toUiListWithEvents(
+                localUserId = authInfo.user.id,
+                messages = chatInfo.messages,
+                events = chatInfo.events,
+                temporaryAttachmentFiles = temporaryFiles
+            ),
             typingUsers = typingUsers
         )
     }
@@ -167,6 +171,11 @@ class ChatDetailViewModel(
             is ChatDetailAction.OnAttachmentLongClick -> onAttachmentLongClick(action.attachment)
             ChatDetailAction.OnDismissAttachmentMenu -> onDismissAttachmentMenu()
             is ChatDetailAction.OnSaveAttachmentClick -> downloadAttachment(action.attachment)
+            ChatDetailAction.OnConfirmAdminLeave -> confirmAdminLeave()
+            ChatDetailAction.OnDismissAdminLeaveConfirmation -> dismissAdminLeaveConfirmation()
+            is ChatDetailAction.OnRemoveMemberClick -> showRemoveMemberConfirmation(action.userId)
+            ChatDetailAction.OnConfirmRemoveMember -> confirmRemoveMember()
+            ChatDetailAction.OnDismissRemoveMemberConfirmation -> dismissRemoveMemberConfirmation()
             else -> Unit
         }
     }
@@ -453,10 +462,10 @@ class ChatDetailViewModel(
                 _state.update { it.copy(isPaginationLoading = isLoading) }
             },
             onRequest = { beforeTimestamp ->
-                messageRepository.fetchMessages(chatId, beforeTimestamp)
+                messageRepository.fetchHistory(chatId, beforeTimestamp)
             },
-            getNextKey = { messages ->
-                messages.minOfOrNull { it.createdAt }?.toString()
+            getNextKey = { items ->
+                items.minOfOrNull { it.createdAt }?.toString()
             },
             onError = { throwable ->
                 if (throwable is DataErrorException) {
@@ -467,10 +476,10 @@ class ChatDetailViewModel(
                     }
                 }
             },
-            onSuccess = { messages, _ ->
+            onSuccess = { items, _ ->
                 _state.update {
                     it.copy(
-                        endReached = messages.isEmpty(),
+                        endReached = items.isEmpty(),
                         paginationError = null
                     )
                 }
@@ -486,7 +495,7 @@ class ChatDetailViewModel(
     }
 
     private fun onLeaveChatClick() {
-        val chatId = _chatId.value ?: return
+        val chatUi = state.value.chatUi ?: return
 
         _state.update {
             it.copy(
@@ -494,9 +503,34 @@ class ChatDetailViewModel(
             )
         }
 
+        if (chatUi.isCurrentUserAdmin && chatUi.otherParticipants.isNotEmpty()) {
+            _state.update {
+                it.copy(isAdminLeaveConfirmationVisible = true)
+            }
+        } else {
+            performLeaveChat(confirmDelete = false)
+        }
+    }
+
+    private fun confirmAdminLeave() {
+        _state.update {
+            it.copy(isAdminLeaveConfirmationVisible = false)
+        }
+        performLeaveChat(confirmDelete = true)
+    }
+
+    private fun dismissAdminLeaveConfirmation() {
+        _state.update {
+            it.copy(isAdminLeaveConfirmationVisible = false)
+        }
+    }
+
+    private fun performLeaveChat(confirmDelete: Boolean) {
+        val chatId = _chatId.value ?: return
+
         viewModelScope.launch {
             chatRepository
-                .leaveChat(chatId)
+                .leaveChat(chatId, confirmDelete)
                 .onSuccess {
                     _state.value.messageTextFieldState.clearText()
 
@@ -518,6 +552,37 @@ class ChatDetailViewModel(
                         ChatDetailEvent.OnError(
                             error.toUiText()
                         )
+                    )
+                }
+        }
+    }
+
+    private fun showRemoveMemberConfirmation(userId: String) {
+        _state.update {
+            it.copy(memberToRemove = userId)
+        }
+    }
+
+    private fun dismissRemoveMemberConfirmation() {
+        _state.update {
+            it.copy(memberToRemove = null)
+        }
+    }
+
+    private fun confirmRemoveMember() {
+        val chatId = _chatId.value ?: return
+        val userId = _state.value.memberToRemove ?: return
+
+        _state.update {
+            it.copy(memberToRemove = null)
+        }
+
+        viewModelScope.launch {
+            chatRepository
+                .removeParticipant(chatId, userId)
+                .onFailure { error ->
+                    eventChannel.send(
+                        ChatDetailEvent.OnError(error.toUiText())
                     )
                 }
         }

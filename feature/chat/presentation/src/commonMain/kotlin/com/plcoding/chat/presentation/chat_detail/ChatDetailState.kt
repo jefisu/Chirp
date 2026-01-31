@@ -27,7 +27,9 @@ data class ChatDetailState(
     val connectionState: ConnectionState = ConnectionState.DISCONNECTED,
     val imagesSelected: List<PickedImageData> = emptyList(),
     val attachmentPreviewData: Any? = null,
-    val typingUsers: TypingUsers = emptyMap()
+    val typingUsers: TypingUsers = emptyMap(),
+    val isAdminLeaveConfirmationVisible: Boolean = false,
+    val memberToRemove: String? = null
 )
 
 data class BannerState(

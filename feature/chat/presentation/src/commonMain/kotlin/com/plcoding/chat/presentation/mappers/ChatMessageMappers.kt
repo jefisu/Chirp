@@ -1,32 +1,84 @@
 package com.plcoding.chat.presentation.mappers
 
+import com.plcoding.chat.domain.models.ChatEventWithUsers
 import com.plcoding.chat.domain.models.MessageWithSender
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.util.DateUtils
 import com.plcoding.core.domain.media.File
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
+
+private sealed interface HistoryItemWithTimestamp {
+    val createdAt: Instant
+
+    data class Message(
+        val messageWithSender: MessageWithSender,
+        override val createdAt: Instant
+    ) : HistoryItemWithTimestamp
+
+    data class Event(
+        val eventWithUsers: ChatEventWithUsers,
+        override val createdAt: Instant
+    ) : HistoryItemWithTimestamp
+}
 
 fun List<MessageWithSender>.toUiList(
     localUserId: String,
     temporaryAttachmentFiles: Map<String, File> = emptyMap()
 ): List<MessageUi> {
-    return this
-        .sortedByDescending { it.message.createdAt }
+    return toUiListWithEvents(
+        localUserId = localUserId,
+        messages = this,
+        events = emptyList(),
+        temporaryAttachmentFiles = temporaryAttachmentFiles
+    )
+}
+
+fun toUiListWithEvents(
+    localUserId: String,
+    messages: List<MessageWithSender>,
+    events: List<ChatEventWithUsers>,
+    temporaryAttachmentFiles: Map<String, File> = emptyMap()
+): List<MessageUi> {
+    val messageItems = messages.map {
+        HistoryItemWithTimestamp.Message(it, it.message.createdAt)
+    }
+    val eventItems = events.map {
+        HistoryItemWithTimestamp.Event(it, it.event.createdAt)
+    }
+
+    val allItems = (messageItems + eventItems).sortedByDescending { it.createdAt }
+
+    return allItems
         .groupBy {
-            it.message.createdAt.toLocalDateTime(TimeZone.currentSystemDefault()).date
+            it.createdAt.toLocalDateTime(TimeZone.currentSystemDefault()).date
         }
-        .flatMap { (date, messages) ->
-            messages.map {
-                it.toUi(
-                    localUserId = localUserId,
-                    temporaryAttachmentFiles = temporaryAttachmentFiles
-                )
+        .flatMap { (date, items) ->
+            items.map { item ->
+                when (item) {
+                    is HistoryItemWithTimestamp.Message -> item.messageWithSender.toUi(
+                        localUserId = localUserId,
+                        temporaryAttachmentFiles = temporaryAttachmentFiles
+                    )
+                    is HistoryItemWithTimestamp.Event -> item.eventWithUsers.toUi(localUserId)
+                }
             } + MessageUi.DateSeparator(
                 id = date.toString(),
                 date = DateUtils.formatDateSeparator(date)
             )
         }
+}
+
+fun ChatEventWithUsers.toUi(localUserId: String): MessageUi.SystemEvent {
+    return MessageUi.SystemEvent(
+        id = event.id,
+        eventType = event.eventType,
+        actorUsername = actor.username,
+        targetUsername = target?.username,
+        formattedTime = DateUtils.formatMessageTime(event.createdAt),
+        isLocalUserActor = actor.userId == localUserId
+    )
 }
 
 fun MessageWithSender.toUi(

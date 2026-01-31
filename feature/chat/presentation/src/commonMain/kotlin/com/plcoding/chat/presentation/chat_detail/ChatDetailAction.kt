@@ -29,4 +29,9 @@ sealed interface ChatDetailAction {
     data class OnAttachmentLongClick(val attachment: MessageAttachmentUi) : ChatDetailAction
     data object OnDismissAttachmentMenu : ChatDetailAction
     data class OnSaveAttachmentClick(val attachment: MessageAttachmentUi) : ChatDetailAction
+    data object OnConfirmAdminLeave : ChatDetailAction
+    data object OnDismissAdminLeaveConfirmation : ChatDetailAction
+    data class OnRemoveMemberClick(val userId: String) : ChatDetailAction
+    data object OnConfirmRemoveMember : ChatDetailAction
+    data object OnDismissRemoveMemberConfirmation : ChatDetailAction
 }

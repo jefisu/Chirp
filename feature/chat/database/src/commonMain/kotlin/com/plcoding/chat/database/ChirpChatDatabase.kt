@@ -4,12 +4,14 @@ import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.plcoding.chat.database.dao.ChatDao
+import com.plcoding.chat.database.dao.ChatEventDao
 import com.plcoding.chat.database.dao.ChatMessageDao
 import com.plcoding.chat.database.dao.ChatParticipantDao
 import com.plcoding.chat.database.dao.ChatParticipantsCrossRefDao
 import com.plcoding.chat.database.dao.MessageAttachmentDao
 import com.plcoding.chat.database.dao.PendingAttachmentDao
 import com.plcoding.chat.database.entities.ChatEntity
+import com.plcoding.chat.database.entities.ChatEventEntity
 import com.plcoding.chat.database.entities.ChatMessageEntity
 import com.plcoding.chat.database.entities.ChatParticipantCrossRef
 import com.plcoding.chat.database.entities.ChatParticipantEntity
@@ -24,7 +26,8 @@ import com.plcoding.chat.database.view.LastMessageView
         ChatMessageEntity::class,
         ChatParticipantCrossRef::class,
         MessageAttachmentEntity::class,
-        PendingAttachmentEntity::class
+        PendingAttachmentEntity::class,
+        ChatEventEntity::class
     ],
     views = [
         LastMessageView::class
@@ -39,6 +42,7 @@ abstract class ChirpChatDatabase: RoomDatabase() {
     abstract val chatParticipantsCrossRefDao: ChatParticipantsCrossRefDao
     abstract val messageAttachmentDao: MessageAttachmentDao
     abstract val pendingAttachmentDao: PendingAttachmentDao
+    abstract val chatEventDao: ChatEventDao
 
     companion object {
         const val DB_NAME = "chirp.db"

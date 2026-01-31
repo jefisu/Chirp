@@ -50,7 +50,9 @@ object ChatPreviewData {
             deliveryStatus = ChatMessageDeliveryStatus.SENT,
             attachments = emptyList(),
         ),
-        lastMessageSenderUsername = "Philipp"
+        lastMessageSenderUsername = "Philipp",
+        isCurrentUserAdmin = false,
+        creatorId = null
     )
 
     val attachments = ('a'..'f').map {

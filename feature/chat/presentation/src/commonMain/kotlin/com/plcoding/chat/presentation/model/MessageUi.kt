@@ -1,5 +1,6 @@
 package com.plcoding.chat.presentation.model
 
+import com.plcoding.chat.domain.models.ChatEventType
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
 import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
@@ -25,5 +26,14 @@ sealed class MessageUi(open val id: String) {
     data class DateSeparator(
         override val id: String,
         val date: UiText,
+    ): MessageUi(id)
+
+    data class SystemEvent(
+        override val id: String,
+        val eventType: ChatEventType,
+        val actorUsername: String,
+        val targetUsername: String?,
+        val formattedTime: UiText,
+        val isLocalUserActor: Boolean,
     ): MessageUi(id)
 }

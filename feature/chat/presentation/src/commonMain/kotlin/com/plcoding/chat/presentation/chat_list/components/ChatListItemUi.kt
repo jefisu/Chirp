@@ -156,7 +156,8 @@ fun ChatListItemUiPreview() {
                     deliveryStatus = ChatMessageDeliveryStatus.SENT,
                     attachments = emptyList()
                 ),
-                lastMessageSenderUsername = "Philipp"
+                lastMessageSenderUsername = "Philipp",
+                creatorId = null
             )
         )
     }

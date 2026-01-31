@@ -5,6 +5,7 @@ import com.plcoding.chat.data.mappers.toChatEntity
 import com.plcoding.chat.data.mappers.toChatInfo
 import com.plcoding.chat.data.mappers.toChatParticipant
 import com.plcoding.chat.data.mappers.toChatParticipantEntity
+import com.plcoding.chat.data.mappers.toDomainChatEventWithUsers
 import com.plcoding.chat.data.mappers.toLastMessageView
 import com.plcoding.chat.data.mappers.toMessageAttachment
 import com.plcoding.chat.database.ChirpChatDatabase
@@ -24,6 +25,7 @@ import com.plcoding.core.domain.util.onSuccess
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -64,18 +66,20 @@ class OfflineFirstChatRepository(
     }
 
     override fun getChatInfoById(chatId: String): Flow<ChatInfo> {
-        return db.chatDao.getChatInfoById(chatId)
-            .filterNotNull()
-            .map { chatInfo ->
-                ChatInfoEntity(
-                    chat = chatInfo.chat,
-                    participants = chatInfo
-                        .participants
-                        .onlyActive(chatInfo.chat.chatId),
-                    messagesWithSenders = chatInfo.messagesWithSenders
-                )
-            }
-            .map { it.toChatInfo() }
+        return combine(
+            db.chatDao.getChatInfoById(chatId).filterNotNull(),
+            db.chatEventDao.getEventsWithUsersByChatId(chatId)
+        ) { chatInfo, eventsWithUsers ->
+            val filteredChatInfo = ChatInfoEntity(
+                chat = chatInfo.chat,
+                participants = chatInfo
+                    .participants
+                    .onlyActive(chatInfo.chat.chatId),
+                messagesWithSenders = chatInfo.messagesWithSenders
+            )
+            val events = eventsWithUsers.map { it.toDomainChatEventWithUsers() }
+            filteredChatInfo.toChatInfo().copy(events = events)
+        }
     }
 
     override fun getActiveParticipantsByChatId(chatId: String): Flow<List<ChatParticipant>> {
@@ -133,11 +137,25 @@ class OfflineFirstChatRepository(
             }
     }
 
-    override suspend fun leaveChat(chatId: String): EmptyResult<DataError.Remote> {
+    override suspend fun leaveChat(
+        chatId: String,
+        confirmDelete: Boolean
+    ): EmptyResult<DataError.Remote> {
         return chatService
-            .leaveChat(chatId)
+            .leaveChat(chatId, confirmDelete)
             .onSuccess {
                 db.chatDao.deleteChatById(chatId)
+            }
+    }
+
+    override suspend fun removeParticipant(
+        chatId: String,
+        userId: String
+    ): EmptyResult<DataError.Remote> {
+        return chatService
+            .removeParticipant(chatId, userId)
+            .onSuccess {
+                fetchChatById(chatId)
             }
     }
 

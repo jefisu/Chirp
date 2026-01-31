@@ -1,8 +1,11 @@
 package com.plcoding.chat.data.message
 
+import com.plcoding.chat.data.dto.ChatHistoryItemDto
 import com.plcoding.chat.data.dto.ChatMessageDto
+import com.plcoding.chat.data.mappers.toChatHistoryItem
 import com.plcoding.chat.data.mappers.toChatMessage
 import com.plcoding.chat.domain.message.ChatMessageService
+import com.plcoding.chat.domain.models.ChatHistoryItem
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.core.data.networking.delete
 import com.plcoding.core.data.networking.get
@@ -35,5 +38,20 @@ class KtorChatMessageService(
                 }
             }
         ).map { it.map { it.toChatMessage() } }
+    }
+
+    override suspend fun fetchHistory(
+        chatId: String,
+        before: String?
+    ): Result<List<ChatHistoryItem>, DataError.Remote> {
+        return httpClient.get<List<ChatHistoryItemDto>>(
+            route = "/chat/$chatId/history",
+            queryParams = buildMap {
+                this["pageSize"] = ChatMessageConstants.PAGE_SIZE
+                if (before != null) {
+                    this["before"] = before
+                }
+            }
+        ).map { items -> items.map { it.toChatHistoryItem() } }
     }
 }

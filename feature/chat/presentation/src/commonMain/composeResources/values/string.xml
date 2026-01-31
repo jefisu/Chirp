@@ -67,4 +67,16 @@
     <string name="is_typing">%1$s is typing...</string>
     <string name="are_typing">%1$s are typing...</string>
     <string name="several_people_are_typing">Several people are typing...</string>
+
+    <string name="participant_removed_event">%1$s removed %2$s from the chat</string>
+    <string name="participant_added_event">%1$s added %2$s to the chat</string>
+    <string name="you_removed_participant_event">You removed %1$s from the chat</string>
+    <string name="you_added_participant_event">You added %1$s to the chat</string>
+    <string name="you_were_removed">You were removed from the chat by %1$s</string>
+    <string name="admin_leave_confirmation_title">Delete chat for everyone?</string>
+    <string name="admin_leave_confirmation_desc">As the admin, leaving will permanently delete this chat for all members. This action cannot be undone.</string>
+    <string name="remove_member">Remove member</string>
+    <string name="remove_member_confirmation">Are you sure you want to remove %1$s from this chat?</string>
+    <string name="remove">Remove</string>
+    <string name="admin">Admin</string>
 </resources>

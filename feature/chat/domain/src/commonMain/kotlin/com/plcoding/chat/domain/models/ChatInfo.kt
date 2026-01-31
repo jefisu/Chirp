@@ -2,5 +2,6 @@ package com.plcoding.chat.domain.models
 
 data class ChatInfo(
     val chat: Chat,
-    val messages: List<MessageWithSender>
+    val messages: List<MessageWithSender>,
+    val events: List<ChatEventWithUsers> = emptyList()
 )

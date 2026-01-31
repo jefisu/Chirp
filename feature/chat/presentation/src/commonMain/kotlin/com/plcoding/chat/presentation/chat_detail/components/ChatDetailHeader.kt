@@ -166,7 +166,8 @@ fun ChatDetailHeaderPreview() {
                             deliveryStatus = ChatMessageDeliveryStatus.SENT,
                             attachments = emptyList()
                         ),
-                        lastMessageSenderUsername = "Philipp"
+                        lastMessageSenderUsername = "Philipp",
+                        creatorId = null
                     ),
                     onChatOptionsClick = {},
                     onManageChatClick = {},

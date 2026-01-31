@@ -13,5 +13,9 @@ data class ManageChatState(
     val currentSearchResult: ChatParticipantUi? = null,
     val searchError: UiText? = null,
     val isSubmitting: Boolean = false,
-    val submitError: UiText? = null
+    val submitError: UiText? = null,
+    val isCurrentUserAdmin: Boolean = false,
+    val creatorId: String? = null,
+    val memberToRemove: String? = null,
+    val localUserId: String? = null
 )

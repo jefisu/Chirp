@@ -4,21 +4,25 @@ import com.plcoding.chat.data.dto.websocket.IncomingWebSocketDto
 import com.plcoding.chat.data.dto.websocket.IncomingWebSocketType
 import com.plcoding.chat.data.dto.websocket.OutgoingWebSocketDto
 import com.plcoding.chat.data.dto.websocket.WebSocketMessageDto
+import com.plcoding.chat.data.mappers.toChatEventEntity
 import com.plcoding.chat.data.mappers.toChatMessage
 import com.plcoding.chat.data.mappers.toChatMessageEntity
+import com.plcoding.chat.data.mappers.toDomainChatEventWithUsers
 import com.plcoding.chat.data.mappers.toMessageAttachmentsEntities
 import com.plcoding.chat.data.mappers.toTypingEvent
 import com.plcoding.chat.data.mappers.wrapOutgoingMessage
 import com.plcoding.chat.data.network.KtorWebSocketConnector
 import com.plcoding.chat.database.ChirpChatDatabase
 import com.plcoding.chat.domain.chat.ChatConnectionClient
+import com.plcoding.chat.domain.chat.ChatDeletedEvent
 import com.plcoding.chat.domain.chat.ChatRepository
+import com.plcoding.chat.domain.chat.RemovedFromChatEvent
 import com.plcoding.core.domain.auth.SessionStorage
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
@@ -33,33 +37,43 @@ class WebSocketChatConnectionClient(
     private val applicationScope: CoroutineScope
 ) : ChatConnectionClient {
 
-    override val chatMessages = webSocketConnector
-        .messages
-        .mapNotNull { parseIncomingMessage(it) }
-        .onEach { handleIncomingMessage(it) }
-        .filterIsInstance<IncomingWebSocketDto.NewMessageDto>()
-        .mapNotNull {
-            database
-                .chatMessageDao
-                .getMessageById(it.id)
-                ?.toChatMessage()
-        }
-        .shareIn(
-            applicationScope,
-            SharingStarted.WhileSubscribed(5000)
-        )
+    override val chatMessages = incomingMessages<IncomingWebSocketDto.NewMessageDto, _> {
+        database.chatMessageDao.getMessageById(it.id)?.toChatMessage()
+    }
 
     override val connectionState = webSocketConnector.connectionState
 
-    override val typingEvents = webSocketConnector
-        .messages
-        .mapNotNull { parseIncomingMessage(it) }
-        .filterIsInstance<IncomingWebSocketDto.TypingEventDto>()
-        .map { it.toTypingEvent() }
-        .shareIn(
-            applicationScope,
-            SharingStarted.WhileSubscribed(5000)
-        )
+    override val typingEvents = incomingMessages<IncomingWebSocketDto.TypingEventDto, _> {
+        it.toTypingEvent()
+    }
+
+    override val chatEvents = incomingMessages<IncomingWebSocketDto.ChatEventDto, _> {
+        database.chatEventDao.getEventWithUsersById(it.eventId)?.toDomainChatEventWithUsers()
+    }
+
+    override val chatDeletedEvents = incomingMessages<IncomingWebSocketDto.ChatDeletedDto, _> {
+        ChatDeletedEvent(it.chatId, it.deletedByUserId)
+    }
+
+    override val removedFromChatEvents =
+        incomingMessages<IncomingWebSocketDto.RemovedFromChatDto, _> {
+            RemovedFromChatEvent(it.chatId, it.removedByUserId, it.removedByUsername)
+        }
+
+    private inline fun <reified T : IncomingWebSocketDto, R : Any> incomingMessages(
+        crossinline transform: suspend (T) -> R?
+    ): Flow<R> {
+        return webSocketConnector
+            .messages
+            .mapNotNull { parseIncomingMessage(it) }
+            .onEach { handleIncomingMessage(it) }
+            .filterIsInstance<T>()
+            .mapNotNull { transform(it) }
+            .shareIn(
+                applicationScope,
+                SharingStarted.WhileSubscribed(5000)
+            )
+    }
 
     override suspend fun sendTypingEvent(chatId: String, isTyping: Boolean) {
         val dto = OutgoingWebSocketDto.TypingEvent(
@@ -91,6 +105,18 @@ class WebSocketChatConnectionClient(
                 json.decodeFromString<IncomingWebSocketDto.TypingEventDto>(message.payload)
             }
 
+            IncomingWebSocketType.CHAT_EVENT.name -> {
+                json.decodeFromString<IncomingWebSocketDto.ChatEventDto>(message.payload)
+            }
+
+            IncomingWebSocketType.CHAT_DELETED.name -> {
+                json.decodeFromString<IncomingWebSocketDto.ChatDeletedDto>(message.payload)
+            }
+
+            IncomingWebSocketType.REMOVED_FROM_CHAT.name -> {
+                json.decodeFromString<IncomingWebSocketDto.RemovedFromChatDto>(message.payload)
+            }
+
             else -> null
         }
     }
@@ -102,6 +128,9 @@ class WebSocketChatConnectionClient(
             is IncomingWebSocketDto.NewMessageDto -> handleNewMessage(message)
             is IncomingWebSocketDto.ProfilePictureUpdated -> updateProfilePicture(message)
             is IncomingWebSocketDto.TypingEventDto -> Unit
+            is IncomingWebSocketDto.ChatEventDto -> handleChatEvent(message)
+            is IncomingWebSocketDto.ChatDeletedDto -> handleChatDeleted(message)
+            is IncomingWebSocketDto.RemovedFromChatDto -> handleRemovedFromChat(message)
         }
     }
 
@@ -148,5 +177,19 @@ class WebSocketChatConnectionClient(
                 )
             )
         }
+    }
+
+    private suspend fun handleChatEvent(message: IncomingWebSocketDto.ChatEventDto) {
+        val entity = message.toChatEventEntity()
+        database.chatEventDao.upsertEvent(entity)
+        chatRepository.fetchChatById(message.chatId)
+    }
+
+    private suspend fun handleChatDeleted(message: IncomingWebSocketDto.ChatDeletedDto) {
+        database.chatDao.deleteChatById(message.chatId)
+    }
+
+    private suspend fun handleRemovedFromChat(message: IncomingWebSocketDto.RemovedFromChatDto) {
+        database.chatDao.deleteChatById(message.chatId)
     }
 }

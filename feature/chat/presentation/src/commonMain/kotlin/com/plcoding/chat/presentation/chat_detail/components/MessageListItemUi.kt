@@ -66,6 +66,13 @@ fun MessageListItemUi(
                     onAttachmentClick = onAttachmentClick,
                 )
             }
+
+            is MessageUi.SystemEvent -> {
+                SystemEventMessage(
+                    event = messageUi,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }

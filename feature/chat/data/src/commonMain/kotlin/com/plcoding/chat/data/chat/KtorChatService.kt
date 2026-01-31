@@ -43,9 +43,17 @@ class KtorChatService(
         ).map { it.toChat() }
     }
 
-    override suspend fun leaveChat(chatId: String): EmptyResult<DataError.Remote> {
+    override suspend fun leaveChat(
+        chatId: String,
+        confirmDelete: Boolean
+    ): EmptyResult<DataError.Remote> {
+        val route = if (confirmDelete) {
+            "/chat/$chatId/leave?confirmDelete=true"
+        } else {
+            "/chat/$chatId/leave"
+        }
         return httpClient.delete<Unit>(
-            route = "/chat/$chatId/leave"
+            route = route
         ).asEmptyResult()
     }
 
@@ -59,5 +67,14 @@ class KtorChatService(
                 userIds = userIds
             )
         ).map { it.toChat() }
+    }
+
+    override suspend fun removeParticipant(
+        chatId: String,
+        userId: String
+    ): EmptyResult<DataError.Remote> {
+        return httpClient.delete<Unit>(
+            route = "/chat/$chatId/participants/$userId"
+        ).asEmptyResult()
     }
 }

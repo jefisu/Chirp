@@ -3,6 +3,7 @@
 package com.plcoding.chat.data.message
 
 import com.plcoding.chat.data.dto.websocket.OutgoingWebSocketDto
+import com.plcoding.chat.data.mappers.toChatEventEntity
 import com.plcoding.chat.data.mappers.toChatMessageEntity
 import com.plcoding.chat.data.mappers.toMessageAttachmentDto
 import com.plcoding.chat.data.mappers.toMessageAttachmentEntity
@@ -19,6 +20,7 @@ import com.plcoding.chat.domain.message.MessageAttachmentRepository
 import com.plcoding.chat.domain.message.MessageAttachmentScheduler
 import com.plcoding.chat.domain.message.MessageRepository
 import com.plcoding.chat.domain.models.BackgroundUploadInfo
+import com.plcoding.chat.domain.models.ChatHistoryItem
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
 import com.plcoding.chat.domain.models.MessageAttachmentUploadStatus
@@ -201,6 +203,25 @@ class OfflineFirstMessageRepository(
             }
     }
 
+    override suspend fun fetchHistory(
+        chatId: String,
+        before: String?
+    ): Result<List<ChatHistoryItem>, DataError> {
+        return chatMessageService
+            .fetchHistory(chatId, before)
+            .onSuccess { items ->
+                applicationScope.launch {
+                    safeDatabaseUpdate {
+                        saveFetchedHistory(
+                            chatId = chatId,
+                            items = items,
+                            shouldSync = before == null
+                        )
+                    }
+                }
+            }
+    }
+
     override fun getMessagesForChat(chatId: String): Flow<List<MessageWithSender>> {
         return database
             .chatMessageDao
@@ -327,5 +348,23 @@ class OfflineFirstMessageRepository(
             shouldSync = shouldSync,
             messageAttachmentDao = database.messageAttachmentDao
         )
+    }
+
+    private suspend fun saveFetchedHistory(
+        chatId: String,
+        items: List<ChatHistoryItem>,
+        shouldSync: Boolean
+    ) {
+        val messages = items.filterIsInstance<ChatHistoryItem.Message>().map { it.message }
+        val events = items.filterIsInstance<ChatHistoryItem.Event>().map { it.event }
+
+        if (messages.isNotEmpty()) {
+            saveFetchedMessages(chatId, messages, shouldSync)
+        }
+
+        if (events.isNotEmpty()) {
+            val eventEntities = events.map { it.toChatEventEntity() }
+            database.chatEventDao.upsertEvents(eventEntities)
+        }
     }
 }

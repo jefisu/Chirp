@@ -47,8 +47,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import chirp.feature.chat.presentation.generated.resources.Res
+import chirp.feature.chat.presentation.generated.resources.admin_leave_confirmation_desc
+import chirp.feature.chat.presentation.generated.resources.admin_leave_confirmation_title
+import chirp.feature.chat.presentation.generated.resources.cancel
 import chirp.feature.chat.presentation.generated.resources.drop_images_to_share
+import chirp.feature.chat.presentation.generated.resources.leave_chat
 import chirp.feature.chat.presentation.generated.resources.no_chat_selected
+import chirp.feature.chat.presentation.generated.resources.remove
+import chirp.feature.chat.presentation.generated.resources.remove_member
+import chirp.feature.chat.presentation.generated.resources.remove_member_confirmation
 import chirp.feature.chat.presentation.generated.resources.select_a_chat
 import coil3.compose.rememberAsyncImagePainter
 import com.plcoding.chat.presentation.chat_detail.components.AttachmentContextMenu
@@ -65,6 +72,7 @@ import com.plcoding.chat.presentation.components.ChatHeader
 import com.plcoding.chat.presentation.components.EmptySection
 import com.plcoding.chat.presentation.profile.components.DragAndDropOverlay
 import com.plcoding.chat.presentation.util.ChatPreviewData
+import com.plcoding.core.designsystem.components.dialogs.DestructiveConfirmationDialog
 import com.plcoding.core.designsystem.components.dialogs.ErrorDialog
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
@@ -459,6 +467,45 @@ fun ChatDetailScreen(
                     onAction(ChatDetailAction.OnDismissErrorDialog)
                 }
             )
+
+            if (state.isAdminLeaveConfirmationVisible) {
+                DestructiveConfirmationDialog(
+                    title = stringResource(Res.string.admin_leave_confirmation_title),
+                    description = stringResource(Res.string.admin_leave_confirmation_desc),
+                    confirmButtonText = stringResource(Res.string.leave_chat),
+                    cancelButtonText = stringResource(Res.string.cancel),
+                    onConfirmClick = {
+                        onAction(ChatDetailAction.OnConfirmAdminLeave)
+                    },
+                    onCancelClick = {
+                        onAction(ChatDetailAction.OnDismissAdminLeaveConfirmation)
+                    },
+                    onDismiss = {
+                        onAction(ChatDetailAction.OnDismissAdminLeaveConfirmation)
+                    }
+                )
+            }
+
+            val memberToRemove = state.memberToRemove
+            val memberToRemoveUsername = state.chatUi?.otherParticipants
+                ?.find { it.id == memberToRemove }?.username
+            if (memberToRemove != null && memberToRemoveUsername != null) {
+                DestructiveConfirmationDialog(
+                    title = stringResource(Res.string.remove_member),
+                    description = stringResource(Res.string.remove_member_confirmation, memberToRemoveUsername),
+                    confirmButtonText = stringResource(Res.string.remove),
+                    cancelButtonText = stringResource(Res.string.cancel),
+                    onConfirmClick = {
+                        onAction(ChatDetailAction.OnConfirmRemoveMember)
+                    },
+                    onCancelClick = {
+                        onAction(ChatDetailAction.OnDismissRemoveMemberConfirmation)
+                    },
+                    onDismiss = {
+                        onAction(ChatDetailAction.OnDismissRemoveMemberConfirmation)
+                    }
+                )
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.plcoding.chat.domain.message
 
+import com.plcoding.chat.domain.models.ChatHistoryItem
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
 import com.plcoding.chat.domain.models.MessageWithSender
@@ -20,6 +21,11 @@ interface MessageRepository {
         chatId: String,
         before: String? = null
     ): Result<List<ChatMessage>, DataError>
+
+    suspend fun fetchHistory(
+        chatId: String,
+        before: String? = null
+    ): Result<List<ChatHistoryItem>, DataError>
 
     suspend fun sendMessage(message: OutgoingNewMessage): Result<List<PendingAttachment>, DataError>
 

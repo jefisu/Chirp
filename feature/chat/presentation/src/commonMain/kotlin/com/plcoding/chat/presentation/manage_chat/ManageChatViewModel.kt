@@ -8,11 +8,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import chirp.feature.chat.presentation.generated.resources.Res
 import chirp.feature.chat.presentation.generated.resources.error_participant_not_found
-import com.plcoding.chat.domain.participant.ChatParticipantService
 import com.plcoding.chat.domain.chat.ChatRepository
+import com.plcoding.chat.domain.participant.ChatParticipantService
 import com.plcoding.chat.presentation.components.manage_chat.ManageChatAction
 import com.plcoding.chat.presentation.components.manage_chat.ManageChatState
 import com.plcoding.chat.presentation.mappers.toUi
+import com.plcoding.core.domain.auth.SessionStorage
 import com.plcoding.core.domain.util.DataError
 import com.plcoding.core.domain.util.onFailure
 import com.plcoding.core.domain.util.onSuccess
@@ -23,7 +24,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.emptyFlow
@@ -39,8 +39,9 @@ import kotlin.time.Duration.Companion.seconds
 
 class ManageChatViewModel(
     private val chatRepository: ChatRepository,
-    private val chatParticipantService: ChatParticipantService
-): ViewModel() {
+    private val chatParticipantService: ChatParticipantService,
+    private val sessionStorage: SessionStorage
+) : ViewModel() {
 
     private val _chatId = MutableStateFlow<String?>(null)
 
@@ -50,17 +51,32 @@ class ManageChatViewModel(
     private var hasLoadedInitialData = false
 
     private val _state = MutableStateFlow(ManageChatState())
-    val state = _chatId
+
+    private val chatInfoFlow = _chatId
         .flatMapLatest { chatId ->
-            if(chatId != null) {
-                chatRepository.getActiveParticipantsByChatId(chatId)
+            if (chatId != null) {
+                chatRepository.getChatInfoById(chatId)
             } else emptyFlow()
         }
-        .combine(_state) { participants, currentState ->
-            currentState.copy(
-                existingChatParticipants = participants.map { it.toUi() }
-            )
-        }
+
+    val state = combine(
+        _chatId.flatMapLatest { chatId ->
+            if (chatId != null) {
+                chatRepository.getActiveParticipantsByChatId(chatId)
+            } else emptyFlow()
+        },
+        chatInfoFlow,
+        sessionStorage.observeAuthInfo(),
+        _state
+    ) { participants, chatInfo, authInfo, currentState ->
+        val localUserId = authInfo?.user?.id
+        currentState.copy(
+            existingChatParticipants = participants.map { it.toUi() },
+            isCurrentUserAdmin = localUserId != null && chatInfo.chat.creatorId == localUserId,
+            creatorId = chatInfo.chat.creatorId,
+            localUserId = localUserId
+        )
+    }
         .onStart {
             if (!hasLoadedInitialData) {
                 searchFlow.launchIn(viewModelScope)
@@ -80,13 +96,46 @@ class ManageChatViewModel(
         }
 
     fun onAction(action: ManageChatAction) {
-        when(action) {
+        when (action) {
             ManageChatAction.OnAddClick -> addParticipant()
             ManageChatAction.OnPrimaryActionClick -> addParticipantsToChat()
             is ManageChatAction.ChatParticipants.OnSelectChat -> {
                 _chatId.update { action.chatId }
             }
+
+            is ManageChatAction.OnRemoveMemberClick -> showRemoveMemberConfirmation(action.userId)
+            ManageChatAction.OnConfirmRemoveMember -> confirmRemoveMember()
+            ManageChatAction.OnDismissRemoveMemberConfirmation -> dismissRemoveMemberConfirmation()
             else -> Unit
+        }
+    }
+
+    private fun showRemoveMemberConfirmation(userId: String) {
+        _state.update {
+            it.copy(memberToRemove = userId)
+        }
+    }
+
+    private fun dismissRemoveMemberConfirmation() {
+        _state.update {
+            it.copy(memberToRemove = null)
+        }
+    }
+
+    private fun confirmRemoveMember() {
+        val chatId = _chatId.value ?: return
+        val userId = _state.value.memberToRemove ?: return
+
+        _state.update {
+            it.copy(memberToRemove = null)
+        }
+
+        viewModelScope.launch {
+            chatRepository
+                .removeParticipant(chatId, userId)
+                .onFailure { error ->
+                    _state.update { it.copy(submitError = error.toUiText()) }
+                }
         }
     }
 
@@ -98,21 +147,23 @@ class ManageChatViewModel(
             val isAlreadyInChat = state.value.existingChatParticipants.any {
                 it.id == participantFromSearch.id
             }
-            val updatedParticipants = if(isAlreadyInChat || isAlreadySelected) {
+            val updatedParticipants = if (isAlreadyInChat || isAlreadySelected) {
                 state.value.selectedChatParticipants
             } else state.value.selectedChatParticipants + participantFromSearch
 
             state.value.queryTextState.clearText()
-            _state.update { it.copy(
-                selectedChatParticipants = updatedParticipants,
-                canAddParticipant = false,
-                currentSearchResult = null
-            ) }
+            _state.update {
+                it.copy(
+                    selectedChatParticipants = updatedParticipants,
+                    canAddParticipant = false,
+                    currentSearchResult = null
+                )
+            }
         }
     }
 
     private fun addParticipantsToChat() {
-        if(state.value.selectedChatParticipants.isEmpty()) {
+        if (state.value.selectedChatParticipants.isEmpty()) {
             return
         }
 
@@ -131,10 +182,12 @@ class ManageChatViewModel(
                     eventChannel.send(ManageChatEvent.OnMembersAdded)
                 }
                 .onFailure { error ->
-                    _state.update { it.copy(
-                        isSubmitting = false,
-                        submitError = error.toUiText()
-                    ) }
+                    _state.update {
+                        it.copy(
+                            isSubmitting = false,
+                            submitError = error.toUiText()
+                        )
+                    }
                 }
         }
     }

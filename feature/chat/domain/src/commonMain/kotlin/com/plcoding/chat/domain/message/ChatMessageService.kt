@@ -1,5 +1,6 @@
 package com.plcoding.chat.domain.message
 
+import com.plcoding.chat.domain.models.ChatHistoryItem
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.core.domain.util.DataError
 import com.plcoding.core.domain.util.EmptyResult
@@ -10,6 +11,11 @@ interface ChatMessageService {
         chatId: String,
         before: String? = null
     ): Result<List<ChatMessage>, DataError.Remote>
+
+    suspend fun fetchHistory(
+        chatId: String,
+        before: String? = null
+    ): Result<List<ChatHistoryItem>, DataError.Remote>
 
     suspend fun deleteMessage(messageId: String): EmptyResult<DataError.Remote>
 }

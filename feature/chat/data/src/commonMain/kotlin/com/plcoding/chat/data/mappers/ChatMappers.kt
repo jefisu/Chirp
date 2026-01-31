@@ -25,7 +25,8 @@ fun ChatDto.toChat(): Chat {
         participants = participants.map { it.toChatParticipant() },
         lastActivityAt = Instant.parse(lastActivityAt),
         lastMessage = lastMessage?.toChatMessage(),
-        lastMessageSenderUsername = lastMessageSenderUsername
+        lastMessageSenderUsername = lastMessageSenderUsername,
+        creatorId = creator.userId
     )
 }
 
@@ -41,7 +42,8 @@ fun ChatEntity.toChat(
         participants = participants,
         lastActivityAt = Instant.fromEpochMilliseconds(lastActivityAt),
         lastMessage = lastMessage,
-        lastMessageSenderUsername = lastMessageSenderUsername
+        lastMessageSenderUsername = lastMessageSenderUsername,
+        creatorId = creatorId
     )
 }
 
@@ -53,14 +55,16 @@ fun ChatWithParticipants.toChat(
         participants = participants.map { it.toChatParticipant() },
         lastActivityAt = Instant.fromEpochMilliseconds(chat.lastActivityAt),
         lastMessage = lastMessage?.toChatMessage(attachments),
-        lastMessageSenderUsername = lastMessage?.senderUsername
+        lastMessageSenderUsername = lastMessage?.senderUsername,
+        creatorId = chat.creatorId
     )
 }
 
 fun Chat.toChatEntity(): ChatEntity {
     return ChatEntity(
         chatId = id,
-        lastActivityAt = lastActivityAt.toEpochMilliseconds()
+        lastActivityAt = lastActivityAt.toEpochMilliseconds(),
+        creatorId = creatorId
     )
 }
 
