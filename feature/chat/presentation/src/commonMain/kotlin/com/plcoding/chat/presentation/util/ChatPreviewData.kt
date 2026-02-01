@@ -9,7 +9,6 @@ import com.plcoding.chat.presentation.chat_detail.ChatDetailState
 import com.plcoding.chat.presentation.model.ChatUi
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
-import com.plcoding.core.designsystem.components.chat.MessageAttachmentTypeUi
 import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import com.plcoding.core.designsystem.components.chat.MessageAttachmentUploadStatusUi
 import com.plcoding.core.presentation.util.UiText
@@ -55,12 +54,11 @@ object ChatPreviewData {
         creatorId = null
     )
 
-    val attachments = ('a'..'f').map {
-        MessageAttachmentUi(
+    val attachmentImages = ('a'..'f').map {
+        MessageAttachmentUi.Image(
             id = it.toString(),
             url = it.toString(),
-            type = MessageAttachmentTypeUi.IMAGE,
-            status = MessageAttachmentUploadStatusUi.PENDING
+            status = MessageAttachmentUploadStatusUi.PENDING,
         )
     }
 
@@ -71,7 +69,7 @@ object ChatPreviewData {
                 content = "Hello world!",
                 deliveryStatus = ChatMessageDeliveryStatus.SENT,
                 formattedSentTime = UiText.DynamicString("Friday, Aug 20"),
-                attachments = if (it == 2) attachments else emptyList(),
+                attachments = if (it == 2) attachmentImages else emptyList(),
             )
         } else {
             MessageUi.OtherUserMessage(

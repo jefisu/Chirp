@@ -58,7 +58,7 @@ fun ChirpChatBubble(
     triangleSize: Dp = 16.dp,
     onLongClick: (() -> Unit)? = null,
     onAttachmentClick: ((MessageAttachmentUi) -> Unit)? = null,
-    onAttachmentLongClick: ((MessageAttachmentUi) -> Unit)? = null
+    onAttachmentLongClick: ((MessageAttachmentUi) -> Unit)? = null,
 ) {
     val padding = 12.dp
 
@@ -139,7 +139,7 @@ private fun AttachedFilesContent(
     onAttachmentLongClick: ((MessageAttachmentUi) -> Unit)?,
     modifier: Modifier = Modifier,
     limitVisible: Int = 5,
-    itemSize: Dp = 52.dp
+    itemSize: Dp = 52.dp,
 ) {
     val totalCount = attachments.size
     val showMoreIndicator = totalCount > limitVisible
@@ -161,7 +161,7 @@ private fun AttachedFilesContent(
     ) {
         attachments.take(visibleCount).forEach { attachment ->
             Box(contentAlignment = Alignment.Center) {
-                if (attachment.type == MessageAttachmentTypeUi.IMAGE) {
+                if (attachment is MessageAttachmentUi.Image) {
                     ChatImageAttachment(
                         url = attachment.url,
                         contentBytes = attachment.contentBytes,
@@ -198,11 +198,13 @@ private fun AttachedFilesContent(
 
         if (showMoreIndicator) {
             val previewAttachment = attachments[visibleCount]
-            ChatMoreAttachmentsIndicator(
-                previewAttachment = previewAttachment,
-                remainingCount = remainingAttachments,
-                modifier = attachmentModifier
-            )
+            if (previewAttachment is MessageAttachmentUi.Image) {
+                ChatMoreAttachmentsIndicator(
+                    previewAttachment = previewAttachment,
+                    remainingCount = remainingAttachments,
+                    modifier = attachmentModifier,
+                )
+            }
         }
     }
 }
@@ -214,7 +216,7 @@ private fun ChatImageAttachment(
     isUploading: Boolean,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    onLongClick: (() -> Unit)? = null
+    onLongClick: (() -> Unit)? = null,
 ) {
     val remotePainter = rememberAsyncImagePainter(url)
     val remotePainterState by remotePainter.state.collectAsStateWithLifecycle()
@@ -280,9 +282,9 @@ private fun ChatImageAttachment(
 
 @Composable
 private fun ChatMoreAttachmentsIndicator(
-    previewAttachment: MessageAttachmentUi,
+    previewAttachment: MessageAttachmentUi.Image,
     remainingCount: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(
         contentAlignment = Alignment.Center,
@@ -341,10 +343,9 @@ fun ChirpChatBubbleLeftPreview() {
 @Preview
 fun ChirpChatBubbleRightPreview() {
     val attachedFiles = ('a'..'f').map {
-        MessageAttachmentUi(
+        MessageAttachmentUi.Image(
             id = it.toString(),
             url = it.toString(),
-            type = MessageAttachmentTypeUi.IMAGE,
             status = MessageAttachmentUploadStatusUi.UPLOADED
         )
     }

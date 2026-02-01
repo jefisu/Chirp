@@ -4,6 +4,7 @@ import com.plcoding.chat.domain.models.ChatEventWithUsers
 import com.plcoding.chat.domain.models.MessageWithSender
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.util.DateUtils
+import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import com.plcoding.core.domain.media.File
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -61,6 +62,7 @@ fun toUiListWithEvents(
                         localUserId = localUserId,
                         temporaryAttachmentFiles = temporaryAttachmentFiles
                     )
+
                     is HistoryItemWithTimestamp.Event -> item.eventWithUsers.toUi(localUserId)
                 }
             } + MessageUi.DateSeparator(
@@ -83,18 +85,26 @@ fun ChatEventWithUsers.toUi(localUserId: String): MessageUi.SystemEvent {
 
 fun MessageWithSender.toUi(
     localUserId: String,
-    temporaryAttachmentFiles: Map<String, File> = emptyMap()
+    temporaryAttachmentFiles: Map<String, File> = emptyMap(),
 ): MessageUi {
     val isFromLocalUser = this.sender.userId == localUserId
+    val attachments = message.attachments.map {
+        val contentBytes = temporaryAttachmentFiles[it.id]?.bytes
+        when (val attachmentUi = it.toMessageAttachmentUi()) {
+            is MessageAttachmentUi.Image -> MessageAttachmentUi.Image(
+                id = attachmentUi.id,
+                url = attachmentUi.url,
+                status = attachmentUi.status,
+                contentBytes = contentBytes,
+            )
+        }
+    }
+
     return if (isFromLocalUser) {
         MessageUi.LocalUserMessage(
             id = message.id,
             content = message.content,
-            attachments = message.attachments.map {
-                it.toMessageAttachmentUi().copy(
-                    contentBytes = temporaryAttachmentFiles[it.id]?.bytes
-                )
-            },
+            attachments = attachments,
             deliveryStatus = message.deliveryStatus,
             formattedSentTime = DateUtils.formatMessageTime(instant = message.createdAt),
         )
