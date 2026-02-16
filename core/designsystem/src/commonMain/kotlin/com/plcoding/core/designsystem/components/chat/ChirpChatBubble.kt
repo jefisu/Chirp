@@ -126,7 +126,7 @@ fun ChirpChatBubble(
         AttachedFilesContent(
             attachments = attachments,
             onAttachmentClick = onAttachmentClick,
-            onAttachmentLongClick = onAttachmentLongClick
+            onAttachmentLongClick = onAttachmentLongClick,
         )
         messageStatus?.invoke()
     }
@@ -141,10 +141,12 @@ private fun AttachedFilesContent(
     limitVisible: Int = 5,
     itemSize: Dp = 52.dp,
 ) {
-    val totalCount = attachments.size
-    val showMoreIndicator = totalCount > limitVisible
-    val visibleCount = if (showMoreIndicator) limitVisible - 1 else totalCount
-    val remainingAttachments = totalCount - visibleCount
+    val imageAttachments = attachments.filterIsInstance<MessageAttachmentUi.Image>()
+
+    val totalImageCount = imageAttachments.size
+    val showMoreIndicator = totalImageCount > limitVisible
+    val visibleImageCount = if (showMoreIndicator) limitVisible - 1 else totalImageCount
+    val remainingAttachments = totalImageCount - visibleImageCount
 
     val inPreviewMode = LocalInspectionMode.current
     val attachmentModifier = Modifier
@@ -155,55 +157,57 @@ private fun AttachedFilesContent(
             drawContent()
         }
 
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
     ) {
-        attachments.take(visibleCount).forEach { attachment ->
-            Box(contentAlignment = Alignment.Center) {
-                if (attachment is MessageAttachmentUi.Image) {
-                    ChatImageAttachment(
-                        url = attachment.url,
-                        contentBytes = attachment.contentBytes,
-                        isUploading = attachment.status != MessageAttachmentUploadStatusUi.UPLOADED,
+        if (imageAttachments.isNotEmpty()) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                imageAttachments.take(visibleImageCount).forEach { attachment ->
+                    Box(contentAlignment = Alignment.Center) {
+                        ChatImageAttachment(
+                            url = attachment.url,
+                            contentBytes = attachment.contentBytes,
+                            isUploading = attachment.status != MessageAttachmentUploadStatusUi.UPLOADED,
+                            modifier = attachmentModifier,
+                            onClick = { onAttachmentClick?.invoke(attachment) },
+                            onLongClick = { onAttachmentLongClick?.invoke(attachment) }
+                        )
+
+                        when (attachment.status) {
+                            MessageAttachmentUploadStatusUi.UPLOADING -> {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.scale(0.5f),
+                                    color = Color.White
+                                )
+                            }
+
+                            MessageAttachmentUploadStatusUi.FAILED -> {
+                                Icon(
+                                    imageVector = Icons.Default.Upload,
+                                    contentDescription = "Retry upload",
+                                    tint = Color.White,
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .scale(0.8f)
+                                )
+                            }
+
+                            else -> Unit
+                        }
+                    }
+                }
+
+                if (showMoreIndicator) {
+                    val previewAttachment = imageAttachments[visibleImageCount]
+                    ChatMoreAttachmentsIndicator(
+                        previewAttachment = previewAttachment,
+                        remainingCount = remainingAttachments,
                         modifier = attachmentModifier,
-                        onClick = { onAttachmentClick?.invoke(attachment) },
-                        onLongClick = { onAttachmentLongClick?.invoke(attachment) }
                     )
                 }
-
-                when (attachment.status) {
-                    MessageAttachmentUploadStatusUi.UPLOADING -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.scale(0.5f),
-                            color = Color.White
-                        )
-                    }
-
-                    MessageAttachmentUploadStatusUi.FAILED -> {
-                        Icon(
-                            imageVector = Icons.Default.Upload,
-                            contentDescription = "Retry upload",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .scale(0.8f)
-                        )
-                    }
-
-                    else -> Unit
-                }
-            }
-        }
-
-        if (showMoreIndicator) {
-            val previewAttachment = attachments[visibleCount]
-            if (previewAttachment is MessageAttachmentUi.Image) {
-                ChatMoreAttachmentsIndicator(
-                    previewAttachment = previewAttachment,
-                    remainingCount = remainingAttachments,
-                    modifier = attachmentModifier,
-                )
             }
         }
     }
