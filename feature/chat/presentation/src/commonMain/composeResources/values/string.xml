@@ -44,6 +44,7 @@
     <string name="drop_images_to_share">Drop your image here to share</string>
     <string name="sent_a_image">Sent a image</string>
     <string name="sent_n_images">Sent %1$d images</string>
+    <string name="voice_message">Voice message (%1$s)</string>
 
     <string name="profile_settings">Profile settings</string>
     <string name="show_password">Show password</string>
@@ -79,4 +80,13 @@
     <string name="remove_member_confirmation">Are you sure you want to remove %1$s from this chat?</string>
     <string name="remove">Remove</string>
     <string name="admin">Admin</string>
+    <string name="microphone_permission_required">Microphone permission is required to record voice messages</string>
+    <string name="audio_permission_denied">Permission denied</string>
+    <string name="audio_recording_failed">Recording failed</string>
+    <string name="audio_playback_failed">Playback failed</string>
+    <string name="audio_file_not_found">File not found</string>
+    <string name="audio_already_recording">Already recording</string>
+    <string name="audio_not_recording">Not recording</string>
+    <string name="audio_unsupported_format">Unsupported format</string>
+    <string name="audio_unknown_error">Unknown error</string>
 </resources>

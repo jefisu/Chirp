@@ -51,7 +51,8 @@ object ChatPreviewData {
         ),
         lastMessageSenderUsername = "Philipp",
         isCurrentUserAdmin = false,
-        creatorId = null
+        creatorId = null,
+        lastMessageFormattedDate = UiText.DynamicString("Today")
     )
 
     val attachmentImages = ('a'..'f').map {
@@ -62,23 +63,49 @@ object ChatPreviewData {
         )
     }
 
+    val attachmentAudio = MessageAttachmentUi.Audio(
+        id = "audio_1",
+        url = "audio_url",
+        status = MessageAttachmentUploadStatusUi.UPLOADED,
+        durationMs = 5000,
+        amplitudes = List(20) { (0..100).random().toFloat() / 100f }
+    )
+
     val messages = (1..20).map {
         if (it % 2 == 0) {
-            MessageUi.LocalUserMessage(
-                id = Uuid.random().toString(),
-                content = "Hello world!",
-                deliveryStatus = ChatMessageDeliveryStatus.SENT,
-                formattedSentTime = UiText.DynamicString("Friday, Aug 20"),
-                attachments = if (it == 2) attachmentImages else emptyList(),
-            )
+            if (it == 2) {
+                MessageUi.LocalUser.Audio(
+                    id = Uuid.random().toString(),
+                    attachment = attachmentAudio,
+                    deliveryStatus = ChatMessageDeliveryStatus.SENT,
+                    formattedSentTime = UiText.DynamicString("Friday, Aug 20"),
+                )
+            } else {
+                MessageUi.LocalUser.Message(
+                    id = Uuid.random().toString(),
+                    content = "Hello world!",
+                    deliveryStatus = ChatMessageDeliveryStatus.SENT,
+                    formattedSentTime = UiText.DynamicString("Friday, Aug 20"),
+                    attachments = if (it == 4) attachmentImages else emptyList(),
+                )
+            }
         } else {
-            MessageUi.OtherUserMessage(
-                id = Uuid.random().toString(),
-                content = "Hello world!",
-                sender = otherParticipant2,
-                formattedSentTime = UiText.DynamicString("Friday, Aug 20"),
-                attachments = emptyList(),
-            )
+            if (it == 1) {
+                MessageUi.OtherUser.Audio(
+                    id = Uuid.random().toString(),
+                    attachment = attachmentAudio,
+                    sender = otherParticipant2,
+                    formattedSentTime = UiText.DynamicString("Friday, Aug 20"),
+                )
+            } else {
+                MessageUi.OtherUser.Message(
+                    id = Uuid.random().toString(),
+                    content = "Hello world!",
+                    sender = otherParticipant2,
+                    formattedSentTime = UiText.DynamicString("Friday, Aug 20"),
+                    attachments = emptyList(),
+                )
+            }
         }
     }
 

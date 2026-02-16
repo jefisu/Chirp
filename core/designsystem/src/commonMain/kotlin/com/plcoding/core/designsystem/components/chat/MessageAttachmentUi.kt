@@ -11,6 +11,14 @@ sealed interface MessageAttachmentUi {
         override val status: MessageAttachmentUploadStatusUi,
         val contentBytes: ByteArray? = null,
     ) : MessageAttachmentUi
+
+    data class Audio(
+        override val id: String,
+        override val url: String,
+        override val status: MessageAttachmentUploadStatusUi,
+        val durationMs: Long? = null,
+        val amplitudes: List<Float> = emptyList()
+    ) : MessageAttachmentUi
 }
 
 enum class MessageAttachmentUploadStatusUi {

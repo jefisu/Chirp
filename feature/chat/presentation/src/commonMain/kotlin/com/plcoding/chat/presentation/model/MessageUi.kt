@@ -6,27 +6,53 @@ import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
 import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import com.plcoding.core.presentation.util.UiText
 
-sealed class MessageUi(open val id: String) {
-    data class LocalUserMessage(
-        override val id: String,
-        val content: String?,
-        val deliveryStatus: ChatMessageDeliveryStatus,
-        val formattedSentTime: UiText,
-        val attachments: List<MessageAttachmentUi>,
-    ): MessageUi(id)
+sealed interface MessageUi {
+    val id: String
 
-    data class OtherUserMessage(
-        override val id: String,
-        val content: String?,
-        val formattedSentTime: UiText,
-        val sender: ChatParticipantUi,
-        val attachments: List<MessageAttachmentUi>,
-    ): MessageUi(id)
+    sealed interface LocalUser : MessageUi {
+        val deliveryStatus: ChatMessageDeliveryStatus
+        val formattedSentTime: UiText
+
+        data class Message(
+            override val id: String,
+            val content: String?,
+            val attachments: List<MessageAttachmentUi>,
+            override val deliveryStatus: ChatMessageDeliveryStatus,
+            override val formattedSentTime: UiText,
+        ) : LocalUser
+
+        data class Audio(
+            override val id: String,
+            val attachment: MessageAttachmentUi.Audio,
+            override val deliveryStatus: ChatMessageDeliveryStatus,
+            override val formattedSentTime: UiText,
+        ) : LocalUser
+    }
+
+    sealed interface OtherUser : MessageUi {
+        val sender: ChatParticipantUi
+        val formattedSentTime: UiText
+
+        data class Message(
+            override val id: String,
+            val content: String?,
+            val attachments: List<MessageAttachmentUi>,
+            override val sender: ChatParticipantUi,
+            override val formattedSentTime: UiText,
+        ) : OtherUser
+
+        data class Audio(
+            override val id: String,
+            val attachment: MessageAttachmentUi.Audio,
+            override val sender: ChatParticipantUi,
+            override val formattedSentTime: UiText,
+        ) : OtherUser
+    }
 
     data class DateSeparator(
         override val id: String,
         val date: UiText,
-    ): MessageUi(id)
+    ) : MessageUi
 
     data class SystemEvent(
         override val id: String,
@@ -35,5 +61,5 @@ sealed class MessageUi(open val id: String) {
         val targetUsername: String?,
         val formattedTime: UiText,
         val isLocalUserActor: Boolean,
-    ): MessageUi(id)
+    ) : MessageUi
 }

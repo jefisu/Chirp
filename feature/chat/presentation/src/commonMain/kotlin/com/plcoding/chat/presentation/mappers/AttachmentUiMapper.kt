@@ -13,6 +13,12 @@ fun MessageAttachment.toMessageAttachmentUi(): MessageAttachmentUi {
             url = url,
             status = status.toMessageAttachmentUploadStatusUi(),
         )
+
+        MessageAttachmentType.AUDIO -> MessageAttachmentUi.Audio(
+            id = id,
+            url = url,
+            status = status.toMessageAttachmentUploadStatusUi(),
+        )
     }
 }
 
