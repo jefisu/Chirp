@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "9144a598e90e9e837f520e4ece5741d7",
+    "identityHash": "75a96e008328ddab705ac1701b4ae0b9",
     "entities": [
       {
         "tableName": "ChatEntity",
@@ -443,6 +443,36 @@
             ]
           }
         ]
+      },
+      {
+        "tableName": "AudioMetadataEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`attachmentId` TEXT NOT NULL, `durationMs` INTEGER NOT NULL, `amplitudes` TEXT NOT NULL, PRIMARY KEY(`attachmentId`))",
+        "fields": [
+          {
+            "fieldPath": "attachmentId",
+            "columnName": "attachmentId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMs",
+            "columnName": "durationMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amplitudes",
+            "columnName": "amplitudes",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "attachmentId"
+          ]
+        }
       }
     ],
     "views": [
@@ -453,7 +483,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9144a598e90e9e837f520e4ece5741d7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '75a96e008328ddab705ac1701b4ae0b9')"
     ]
   }
 }

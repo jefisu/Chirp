@@ -9,12 +9,20 @@ import com.plcoding.chat.database.entities.MessageAttachmentEntity
 
 @Dao
 interface MessageAttachmentDao {
-
     @Upsert
     suspend fun upsertAttachments(attachments: List<MessageAttachmentEntity>)
 
     @Query("SELECT * FROM messageattachmententity WHERE messageId = :messageId")
     suspend fun getAttachmentsByMessageId(messageId: String): List<MessageAttachmentEntity>
+
+    @Query(
+        """
+        SELECT DISTINCT url FROM messageattachmententity a
+        INNER JOIN chatmessageentity m ON a.messageId = m.messageId
+        WHERE m.chatId = :chatId AND a.type LIKE 'audio/%'
+    """,
+    )
+    suspend fun getAudioUrlsByChatId(chatId: String): List<String>
 
     @Query("UPDATE messageattachmententity SET url = :url, status = :status WHERE id = :attachmentId")
     suspend fun updateAttachmentUrlAndStatus(attachmentId: String, url: String, status: AttachmentUploadStatus)
