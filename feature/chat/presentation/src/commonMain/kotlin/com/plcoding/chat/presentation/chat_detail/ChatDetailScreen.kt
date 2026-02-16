@@ -52,6 +52,7 @@ import chirp.feature.chat.presentation.generated.resources.admin_leave_confirmat
 import chirp.feature.chat.presentation.generated.resources.cancel
 import chirp.feature.chat.presentation.generated.resources.drop_images_to_share
 import chirp.feature.chat.presentation.generated.resources.leave_chat
+import chirp.feature.chat.presentation.generated.resources.microphone_permission_required
 import chirp.feature.chat.presentation.generated.resources.no_chat_selected
 import chirp.feature.chat.presentation.generated.resources.remove
 import chirp.feature.chat.presentation.generated.resources.remove_member
@@ -70,16 +71,22 @@ import com.plcoding.chat.presentation.chat_detail.components.TypingFormatter
 import com.plcoding.chat.presentation.chat_detail.components.TypingIndicator
 import com.plcoding.chat.presentation.components.ChatHeader
 import com.plcoding.chat.presentation.components.EmptySection
+import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.profile.components.DragAndDropOverlay
 import com.plcoding.chat.presentation.util.ChatPreviewData
 import com.plcoding.core.designsystem.components.dialogs.DestructiveConfirmationDialog
 import com.plcoding.core.designsystem.components.dialogs.ErrorDialog
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
+import com.plcoding.core.domain.audio.PlaybackState
 import com.plcoding.core.presentation.media.ImagePickerMode
 import com.plcoding.core.presentation.media.rememberDragAndDropTarget
 import com.plcoding.core.presentation.media.rememberImagePickerLauncher
+import com.plcoding.core.presentation.permissions.Permission
+import com.plcoding.core.presentation.permissions.PermissionState
+import com.plcoding.core.presentation.permissions.rememberPermissionController
 import com.plcoding.core.presentation.util.ObserveAsEvents
+import com.plcoding.core.presentation.util.UiText
 import com.plcoding.core.presentation.util.clearFocusOnTap
 import com.plcoding.core.presentation.util.currentDeviceConfiguration
 import kotlinx.coroutines.delay
@@ -96,13 +103,14 @@ fun ChatDetailRoot(
     isDetailPresent: Boolean,
     onBack: () -> Unit,
     onChatMembersClick: () -> Unit,
-    viewModel: ChatDetailViewModel = koinViewModel()
+    viewModel: ChatDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     val snackbarState = remember { SnackbarHostState() }
     val messageListState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val permissionController = rememberPermissionController()
 
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
@@ -130,7 +138,7 @@ fun ChatDetailRoot(
     }
 
     BackHandler(
-        enabled = !isDetailPresent
+        enabled = !isDetailPresent,
     ) {
         scope.launch {
             // Add artificial delay to prevent detail back animation from showing
@@ -149,12 +157,25 @@ fun ChatDetailRoot(
             when (action) {
                 is ChatDetailAction.OnChatMembersClick -> onChatMembersClick()
                 is ChatDetailAction.OnBackClick -> onBack()
+                is ChatDetailAction.OnMicrophoneClick ->
+                    scope.launch {
+                        val permission =
+                            permissionController.requestPermission(Permission.RECORD_AUDIO)
+                        if (permission != PermissionState.GRANTED) {
+                            snackbarState.showSnackbar(
+                                UiText
+                                    .Resource(Res.string.microphone_permission_required)
+                                    .asStringAsync(),
+                            )
+                        }
+                    }
+
                 else -> Unit
             }
             viewModel.onAction(action)
         },
         snackbarState = snackbarState,
-        onEvent = viewModel::onEvent
+        onEvent = viewModel::onEvent,
     )
 }
 
@@ -172,7 +193,7 @@ fun ChatDetailScreen(
     val realMessageItemCount = remember(state.messages) {
         state
             .messages
-            .filter { it is com.plcoding.chat.presentation.model.MessageUi.LocalUserMessage || it is com.plcoding.chat.presentation.model.MessageUi.OtherUserMessage }
+            .filter { it is MessageUi.LocalUser || it is MessageUi.OtherUser }
             .size
     }
 
@@ -260,6 +281,16 @@ fun ChatDetailScreen(
     }
     val density = LocalDensity.current
 
+    val isRecordingPlaying =
+        state.audioPlaybackState.playingAttachmentId == null
+                && (state.audioPlaybackState.playbackState == PlaybackState.PLAYING
+                || state.audioPlaybackState.playbackState == PlaybackState.PAUSED)
+
+    val recordingPlaybackProgress =
+        if (isRecordingPlaying && state.audioPlaybackState.duration > 0) {
+            state.audioPlaybackState.currentPosition.toFloat() / state.audioPlaybackState.duration
+        } else 0f
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -292,7 +323,7 @@ fun ChatDetailScreen(
                 )
         ) {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 DynamicRoundedCornerColumn(
                     isCornersRounded = configuration.isWideScreen,
@@ -341,6 +372,7 @@ fun ChatDetailScreen(
                         MessageList(
                             messages = state.messages,
                             messageWithOpenMenu = state.messageWithOpenMenu,
+                            audioPlaybackState = state.audioPlaybackState,
                             listState = messageListState,
                             isPaginationLoading = state.isPaginationLoading,
                             paginationError = state.paginationError?.asString(),
@@ -365,6 +397,20 @@ fun ChatDetailScreen(
                             onAttachmentLongClick = { attachment ->
                                 onAction(ChatDetailAction.OnAttachmentLongClick(attachment))
                             },
+                            onPlayAudioClick = { attachment ->
+                                onAction(
+                                    ChatDetailAction.OnPlayAudioClick(
+                                        attachment.id,
+                                        attachment.url
+                                    )
+                                )
+                            },
+                            onPauseAudioClick = {
+                                val playingId = state.audioPlaybackState.playingAttachmentId
+                                if (playingId != null) {
+                                    onAction(ChatDetailAction.OnPauseAudioClick(playingId))
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
@@ -382,17 +428,41 @@ fun ChatDetailScreen(
                         )
 
                         AnimatedVisibility(
-                            visible = !configuration.isWideScreen
+                            visible = !configuration.isWideScreen,
                         ) {
                             MessageBox(
                                 messageTextFieldState = state.messageTextFieldState,
                                 isSendButtonEnabled = state.canSendMessage,
                                 connectionState = state.connectionState,
                                 attachedImages = state.imagesSelected,
+                                voiceRecordingState = state.voiceRecordingState,
+                                isRecordingPlaying = isRecordingPlaying && state.audioPlaybackState.playbackState == PlaybackState.PLAYING,
+                                recordingPlaybackProgress = recordingPlaybackProgress,
                                 onSendClick = {
                                     onAction(ChatDetailAction.OnSendMessageClick)
                                 },
                                 onAttachFilesClick = imagePickerLauncher::launch,
+                                onMicrophoneClick = {
+                                    onAction(ChatDetailAction.OnMicrophoneClick)
+                                },
+                                onCancelRecording = {
+                                    onAction(ChatDetailAction.OnCancelRecording)
+                                },
+                                onPauseRecording = {
+                                    onAction(ChatDetailAction.OnPauseRecording)
+                                },
+                                onDiscardRecording = {
+                                    onAction(ChatDetailAction.OnDiscardRecording)
+                                },
+                                onSendVoiceMessage = {
+                                    onAction(ChatDetailAction.OnSendVoiceMessage)
+                                },
+                                onPreviewVoiceMessage = {
+                                    onAction(ChatDetailAction.OnPreviewVoiceMessage)
+                                },
+                                onResumeRecording = {
+                                    onAction(ChatDetailAction.OnResumeRecording)
+                                },
                                 onRemoveAttachmentClick = {
                                     onAction(ChatDetailAction.OnRemoveImageSelected(it))
                                 },
@@ -419,17 +489,41 @@ fun ChatDetailScreen(
                     visible = configuration.isWideScreen && state.chatUi != null
                 ) {
                     DynamicRoundedCornerColumn(
-                        isCornersRounded = configuration.isWideScreen
+                        isCornersRounded = configuration.isWideScreen,
                     ) {
                         MessageBox(
                             messageTextFieldState = state.messageTextFieldState,
                             isSendButtonEnabled = state.canSendMessage,
                             connectionState = state.connectionState,
                             attachedImages = state.imagesSelected,
+                            voiceRecordingState = state.voiceRecordingState,
+                            isRecordingPlaying = isRecordingPlaying && state.audioPlaybackState.playbackState == PlaybackState.PLAYING,
+                            recordingPlaybackProgress = recordingPlaybackProgress,
                             onSendClick = {
                                 onAction(ChatDetailAction.OnSendMessageClick)
                             },
                             onAttachFilesClick = imagePickerLauncher::launch,
+                            onMicrophoneClick = {
+                                onAction(ChatDetailAction.OnMicrophoneClick)
+                            },
+                            onCancelRecording = {
+                                onAction(ChatDetailAction.OnCancelRecording)
+                            },
+                            onPauseRecording = {
+                                onAction(ChatDetailAction.OnPauseRecording)
+                            },
+                            onDiscardRecording = {
+                                onAction(ChatDetailAction.OnDiscardRecording)
+                            },
+                            onSendVoiceMessage = {
+                                onAction(ChatDetailAction.OnSendVoiceMessage)
+                            },
+                            onPreviewVoiceMessage = {
+                                onAction(ChatDetailAction.OnPreviewVoiceMessage)
+                            },
+                            onResumeRecording = {
+                                onAction(ChatDetailAction.OnResumeRecording)
+                            },
                             onRemoveAttachmentClick = {
                                 onAction(ChatDetailAction.OnRemoveImageSelected(it))
                             },
@@ -455,7 +549,7 @@ fun ChatDetailScreen(
             ) {
                 if (state.bannerState.formattedDate != null) {
                     DateChip(
-                        date = state.bannerState.formattedDate.asString()
+                        date = state.bannerState.formattedDate.asString(),
                     )
                 }
             }
@@ -487,12 +581,17 @@ fun ChatDetailScreen(
             }
 
             val memberToRemove = state.memberToRemove
-            val memberToRemoveUsername = state.chatUi?.otherParticipants
-                ?.find { it.id == memberToRemove }?.username
+            val memberToRemoveUsername = state.chatUi
+                ?.otherParticipants
+                ?.find { it.id == memberToRemove }
+                ?.username
             if (memberToRemove != null && memberToRemoveUsername != null) {
                 DestructiveConfirmationDialog(
                     title = stringResource(Res.string.remove_member),
-                    description = stringResource(Res.string.remove_member_confirmation, memberToRemoveUsername),
+                    description = stringResource(
+                        Res.string.remove_member_confirmation,
+                        memberToRemoveUsername
+                    ),
                     confirmButtonText = stringResource(Res.string.remove),
                     cancelButtonText = stringResource(Res.string.cancel),
                     onConfirmClick = {

@@ -6,20 +6,22 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +41,7 @@ import chirp.feature.chat.presentation.generated.resources.cloud_off_icon
 import chirp.feature.chat.presentation.generated.resources.send
 import chirp.feature.chat.presentation.generated.resources.send_a_message
 import com.plcoding.chat.domain.models.ConnectionState
+import com.plcoding.chat.presentation.model.VoiceRecordingState
 import com.plcoding.chat.presentation.util.toUiText
 import com.plcoding.core.designsystem.components.buttons.ChirpButton
 import com.plcoding.core.designsystem.components.icon.AttachFileOutlinedIcon
@@ -58,14 +61,28 @@ fun MessageBox(
     isSendButtonEnabled: Boolean,
     connectionState: ConnectionState,
     attachedImages: List<PickedImageData>,
+    voiceRecordingState: VoiceRecordingState,
     onSendClick: () -> Unit,
     onAttachFilesClick: () -> Unit,
+    onMicrophoneClick: () -> Unit,
+    onCancelRecording: () -> Unit,
+    onPauseRecording: () -> Unit,
+    onDiscardRecording: () -> Unit,
+    onResumeRecording: () -> Unit,
+    onSendVoiceMessage: () -> Unit,
+    onPreviewVoiceMessage: () -> Unit,
     onRemoveAttachmentClick: (PickedImageData) -> Unit,
     onImageClick: (PickedImageData) -> Unit,
     modifier: Modifier = Modifier,
+    isRecordingPlaying: Boolean = false,
+    recordingPlaybackProgress: Float = 0f,
 ) {
     val isConnected = connectionState == ConnectionState.CONNECTED
     val deviceConfiguration = currentDeviceConfiguration()
+    val hasText = messageTextFieldState.text.toString().isNotBlank()
+    val hasAttachments = attachedImages.isNotEmpty()
+    val isRecording = voiceRecordingState is VoiceRecordingState.Recording
+    val isPaused = voiceRecordingState is VoiceRecordingState.Paused
 
     val networkConnection = @Composable {
         if (!isConnected) {
@@ -73,13 +90,13 @@ fun MessageBox(
                 imageVector = vectorResource(Res.drawable.cloud_off_icon),
                 contentDescription = connectionState.toUiText().asString(),
                 modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.extended.textDisabled
+                tint = MaterialTheme.colorScheme.extended.textDisabled,
             )
             Spacer(Modifier.width(4.dp))
             Text(
                 text = connectionState.toUiText().asString(),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.extended.textDisabled
+                color = MaterialTheme.colorScheme.extended.textDisabled,
             )
         }
     }
@@ -94,14 +111,36 @@ fun MessageBox(
             Spacer(modifier = Modifier.weight(1f))
             networkConnection()
             AttachFileOutlinedIcon(
-                enabled = isConnected,
+                enabled = isConnected && !hasText,
                 onClick = onAttachFilesClick
             )
-            ChirpButton(
-                text = stringResource(Res.string.send),
-                onClick = onSendClick,
-                enabled = isConnected && isSendButtonEnabled
-            )
+            if (hasText || hasAttachments) {
+                ChirpButton(
+                    text = stringResource(Res.string.send),
+                    onClick = onSendClick,
+                    enabled = isConnected && isSendButtonEnabled,
+                )
+            } else {
+                FilledIconButton(
+                    onClick = onMicrophoneClick,
+                    enabled = isConnected && !isRecording,
+                    shape = MaterialTheme.shapes.small,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContentColor = MaterialTheme.colorScheme.extended.textDisabled,
+                        disabledContainerColor = MaterialTheme.colorScheme.extended.disabledFill
+                    ),
+                    modifier = Modifier
+                        .size(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = "Record voice",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
     }
 
@@ -146,51 +185,69 @@ fun MessageBox(
         }
     }
 
-    ChirpMultiLineTextField(
-        state = messageTextFieldState,
-        modifier = modifier
-            .onPreviewKeyEvent { keyEvent ->
-                val isModifierKeyPressed = keyEvent.isMetaPressed || keyEvent.isCtrlPressed
-                val isSendShortcutPressed = isModifierKeyPressed
-                        && keyEvent.key == Key.Enter
-                        && keyEvent.type == KeyEventType.KeyDown
+    if (isRecording || isPaused) {
+        VoiceRecordingControls(
+            state = voiceRecordingState,
+            isConnected = isConnected,
+            isPlaying = isRecordingPlaying,
+            playbackProgress = recordingPlaybackProgress,
+            onDiscardRecording = onDiscardRecording,
+            onResumeRecording = onResumeRecording,
+            onSendVoiceMessage = onSendVoiceMessage,
+            onPreviewVoiceMessage = onPreviewVoiceMessage,
+            onCancelRecording = onCancelRecording,
+            onPauseRecording = onPauseRecording,
+            modifier = modifier
+                .padding(vertical = 8.dp)
+        )
+    } else {
+        ChirpMultiLineTextField(
+            state = messageTextFieldState,
+            modifier = modifier
+                .onPreviewKeyEvent { keyEvent ->
+                    val isModifierKeyPressed = keyEvent.isMetaPressed || keyEvent.isCtrlPressed
+                    val isSendShortcutPressed = isModifierKeyPressed
+                            && keyEvent.key == Key.Enter
+                            && keyEvent.type == KeyEventType.KeyDown
 
-                if (isSendShortcutPressed) {
-                    onSendClick()
-                    true
-                } else false
-            },
-        placeholder = stringResource(Res.string.send_a_message),
-        keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Send
-        ),
-        onKeyboardAction = onSendClick,
-        bottomContent = bottomContent
-    )
+                    if (isSendShortcutPressed) {
+                        onSendClick()
+                        true
+                    } else false
+                },
+            placeholder = stringResource(Res.string.send_a_message),
+            keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Send
+            ),
+            onKeyboardAction = onSendClick,
+            bottomContent = bottomContent
+        )
+    }
 }
 
 @Composable
 @Preview
 fun MessageBoxPreview() {
     ChirpTheme {
-        Box(
+        MessageBox(
+            messageTextFieldState = rememberTextFieldState(),
+            isSendButtonEnabled = true,
+            connectionState = ConnectionState.CONNECTED,
+            attachedImages = emptyList(),
+            voiceRecordingState = VoiceRecordingState.Idle,
+            onSendClick = {},
+            onAttachFilesClick = {},
+            onMicrophoneClick = {},
+            onCancelRecording = {},
+            onPauseRecording = {},
+            onDiscardRecording = {},
+            onResumeRecording = {},
+            onSendVoiceMessage = {},
+            onPreviewVoiceMessage = {},
+            onRemoveAttachmentClick = {},
+            onImageClick = {},
             modifier = Modifier
                 .fillMaxWidth()
-                .height(300.dp),
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            MessageBox(
-                messageTextFieldState = rememberTextFieldState(),
-                isSendButtonEnabled = true,
-                connectionState = ConnectionState.CONNECTED,
-                attachedImages = emptyList(),
-                onSendClick = {},
-                onAttachFilesClick = {},
-                onRemoveAttachmentClick = {},
-                onImageClick = {},
-                modifier = Modifier
-                    .fillMaxWidth(),
-            )
-        }
+        )
     }
 }

@@ -167,6 +167,7 @@ fun ChatDetailHeaderPreview() {
                             attachments = emptyList()
                         ),
                         lastMessageSenderUsername = "Philipp",
+                        lastMessageFormattedDate = null,
                         creatorId = null
                     ),
                     onChatOptionsClick = {},

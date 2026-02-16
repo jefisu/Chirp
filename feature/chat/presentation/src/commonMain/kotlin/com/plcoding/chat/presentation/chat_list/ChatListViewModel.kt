@@ -2,7 +2,9 @@ package com.plcoding.chat.presentation.chat_list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.plcoding.chat.domain.audio.AudioMetadataRepository
 import com.plcoding.chat.domain.chat.ChatRepository
+import com.plcoding.chat.domain.models.MessageAttachmentType
 import com.plcoding.chat.domain.notification.DeviceTokenService
 import com.plcoding.chat.domain.participant.ChatParticipantRepository
 import com.plcoding.chat.presentation.chat_list_detail.ChatListDetailState
@@ -30,9 +32,9 @@ class ChatListViewModel(
     private val deviceTokenService: DeviceTokenService,
     private val authService: AuthService,
     private val chatParticipantRepository: ChatParticipantRepository,
-    private val sharedState: StateFlow<ChatListDetailState>
+    private val sharedState: StateFlow<ChatListDetailState>,
+    private val audioMetadataRepository: AudioMetadataRepository,
 ) : ViewModel() {
-
     private val eventChannel = Channel<ChatListEvent>()
     val events = eventChannel.receiveAsFlow()
 
@@ -43,14 +45,26 @@ class ChatListViewModel(
         _state,
         repository.getChats(),
         sessionStorage.observeAuthInfo(),
-        sharedState
-    ) { currentState, chats, authInfo, sharedState ->
-        if(authInfo == null) {
+        sharedState,
+        audioMetadataRepository.getAllAudioMetadata(),
+    ) { currentState, chats, authInfo, sharedState, metadataList ->
+        if (authInfo == null) {
             return@combine ChatListState()
         }
 
+        val metadataMap = metadataList.associateBy { it.attachmentId }
+
         currentState.copy(
-            chats = chats.map { it.toUi(authInfo.user.id) },
+            chats = chats.map { chat ->
+                val voiceMessage = chat.lastMessage?.attachments?.firstOrNull {
+                    it.type == MessageAttachmentType.AUDIO
+                }
+                val durationMs = voiceMessage?.let { metadataMap[it.id]?.durationMs }
+                chat.toUi(
+                    localParticipantId = authInfo.user.id,
+                    audioDurationMs = durationMs
+                )
+            },
             localParticipant = authInfo.user.toUi(),
             typingUsersByChat = sharedState.typingUsersByChat
         )
@@ -99,8 +113,7 @@ class ChatListViewModel(
 
     private fun fetchLocalUserProfile() {
         viewModelScope.launch {
-            chatParticipantRepository
-                .fetchLocalParticipant()
+            chatParticipantRepository.fetchLocalParticipant()
         }
     }
 
@@ -122,12 +135,10 @@ class ChatListViewModel(
                             sessionStorage.set(null)
                             repository.deleteAllChats()
                             eventChannel.send(ChatListEvent.OnLogoutSuccess)
-                        }
-                        .onFailure { error ->
+                        }.onFailure { error ->
                             eventChannel.send(ChatListEvent.OnLogoutError(error.toUiText()))
                         }
-                }
-                .onFailure { error ->
+                }.onFailure { error ->
                     eventChannel.send(ChatListEvent.OnLogoutError(error.toUiText()))
                 }
         }

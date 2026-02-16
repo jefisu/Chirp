@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
+import com.plcoding.chat.presentation.model.AudioPlaybackState
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.chat.presentation.util.getChatBubbleColorForUser
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
@@ -25,13 +26,16 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Composable
 fun MessageListItemUi(
     messageUi: MessageUi,
-    messageWithOpenMenu: MessageUi.LocalUserMessage?,
-    onMessageLongClick: (MessageUi.LocalUserMessage) -> Unit,
+    messageWithOpenMenu: MessageUi.LocalUser?,
+    audioPlaybackState: AudioPlaybackState,
+    onMessageLongClick: (MessageUi.LocalUser) -> Unit,
     onDismissMessageMenu: () -> Unit,
-    onDeleteClick: (MessageUi.LocalUserMessage) -> Unit,
-    onRetryClick: (MessageUi.LocalUserMessage) -> Unit,
+    onDeleteClick: (MessageUi.LocalUser) -> Unit,
+    onRetryClick: (MessageUi.LocalUser) -> Unit,
     onAttachmentClick: (MessageAttachmentUi) -> Unit,
     onAttachmentLongClick: (MessageAttachmentUi) -> Unit,
+    onPlayAudioClick: (MessageAttachmentUi.Audio) -> Unit,
+    onPauseAudioClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -45,25 +49,31 @@ fun MessageListItemUi(
                 )
             }
 
-            is MessageUi.LocalUserMessage -> {
+            is MessageUi.LocalUser -> {
                 LocalUserMessage(
                     message = messageUi,
                     messageWithOpenMenu = messageWithOpenMenu,
+                    audioPlaybackState = audioPlaybackState,
                     onMessageLongClick = { onMessageLongClick(messageUi) },
                     onDismissMessageMenu = onDismissMessageMenu,
                     onDeleteClick = { onDeleteClick(messageUi) },
                     onRetryClick = { onRetryClick(messageUi) },
                     onAttachmentClick = onAttachmentClick,
                     onAttachmentLongClick = onAttachmentLongClick,
+                    onPlayAudioClick = onPlayAudioClick,
+                    onPauseAudioClick = onPauseAudioClick,
                 )
             }
 
-            is MessageUi.OtherUserMessage -> {
+            is MessageUi.OtherUser -> {
                 OtherUserMessage(
                     message = messageUi,
+                    audioPlaybackState = audioPlaybackState,
                     color = getChatBubbleColorForUser(messageUi.sender.id),
                     onAttachmentLongClick = onAttachmentLongClick,
                     onAttachmentClick = onAttachmentClick,
+                    onPlayAudioClick = onPlayAudioClick,
+                    onPauseAudioClick = onPauseAudioClick,
                 )
             }
 
@@ -105,7 +115,7 @@ private fun DateSeparatorUi(
 fun MessageListItemLocalMessageUiPreview() {
     ChirpTheme {
         MessageListItemUi(
-            messageUi = MessageUi.LocalUserMessage(
+            messageUi = MessageUi.LocalUser.Message(
                 id = "1",
                 content = "Hello world, this is a preview message that spans multiple lines",
                 deliveryStatus = ChatMessageDeliveryStatus.SENT,
@@ -113,12 +123,15 @@ fun MessageListItemLocalMessageUiPreview() {
                 attachments = emptyList(),
             ),
             messageWithOpenMenu = null,
+            audioPlaybackState = AudioPlaybackState(),
             onRetryClick = {},
             onMessageLongClick = {},
             onDismissMessageMenu = {},
             onDeleteClick = {},
             onAttachmentClick = {},
             onAttachmentLongClick = {},
+            onPlayAudioClick = {},
+            onPauseAudioClick = {},
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp),
@@ -131,7 +144,7 @@ fun MessageListItemLocalMessageUiPreview() {
 fun MessageListItemLocalMessageRetryUiPreview() {
     ChirpTheme {
         MessageListItemUi(
-            messageUi = MessageUi.LocalUserMessage(
+            messageUi = MessageUi.LocalUser.Message(
                 id = "1",
                 content = "Hello world, this is a preview message that spans multiple lines",
                 deliveryStatus = ChatMessageDeliveryStatus.FAILED,
@@ -139,12 +152,15 @@ fun MessageListItemLocalMessageRetryUiPreview() {
                 attachments = emptyList(),
             ),
             messageWithOpenMenu = null,
+            audioPlaybackState = AudioPlaybackState(),
             onRetryClick = {},
             onMessageLongClick = {},
             onDismissMessageMenu = {},
             onDeleteClick = {},
             onAttachmentClick = {},
             onAttachmentLongClick = {},
+            onPlayAudioClick = {},
+            onPauseAudioClick = {},
             modifier = Modifier
                 .fillMaxWidth()
         )
@@ -156,7 +172,7 @@ fun MessageListItemLocalMessageRetryUiPreview() {
 fun MessageListItemOtherMessageUiPreview() {
     ChirpTheme {
         MessageListItemUi(
-            messageUi = MessageUi.OtherUserMessage(
+            messageUi = MessageUi.OtherUser.Message(
                 id = "1",
                 content = "Hello world, this is a preview message that spans multiple lines",
                 formattedSentTime = UiText.DynamicString("Friday 2:20pm"),
@@ -168,12 +184,15 @@ fun MessageListItemOtherMessageUiPreview() {
                 attachments = emptyList(),
             ),
             messageWithOpenMenu = null,
+            audioPlaybackState = AudioPlaybackState(),
             onRetryClick = {},
             onMessageLongClick = {},
             onDismissMessageMenu = {},
             onDeleteClick = {},
             onAttachmentClick = {},
             onAttachmentLongClick = {},
+            onPlayAudioClick = {},
+            onPauseAudioClick = {},
             modifier = Modifier
                 .fillMaxWidth()
         )

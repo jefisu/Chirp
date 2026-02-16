@@ -8,10 +8,10 @@ sealed interface ChatDetailAction {
     data object OnSendMessageClick : ChatDetailAction
     data object OnScrollToTop : ChatDetailAction
     data class OnSelectChat(val chatId: String?) : ChatDetailAction
-    data class OnDeleteMessageClick(val message: MessageUi.LocalUserMessage) : ChatDetailAction
-    data class OnMessageLongClick(val message: MessageUi.LocalUserMessage) : ChatDetailAction
+    data class OnDeleteMessageClick(val message: MessageUi.LocalUser) : ChatDetailAction
+    data class OnMessageLongClick(val message: MessageUi.LocalUser) : ChatDetailAction
     data object OnDismissMessageMenu : ChatDetailAction
-    data class OnRetryClick(val message: MessageUi.LocalUserMessage) : ChatDetailAction
+    data class OnRetryClick(val message: MessageUi.LocalUser) : ChatDetailAction
     data object OnBackClick : ChatDetailAction
     data object OnChatOptionsClick : ChatDetailAction
     data object OnChatMembersClick : ChatDetailAction
@@ -34,4 +34,14 @@ sealed interface ChatDetailAction {
     data class OnRemoveMemberClick(val userId: String) : ChatDetailAction
     data object OnConfirmRemoveMember : ChatDetailAction
     data object OnDismissRemoveMemberConfirmation : ChatDetailAction
+    data object OnMicrophoneClick : ChatDetailAction
+    data object OnCancelRecording : ChatDetailAction
+    data object OnPauseRecording : ChatDetailAction
+    data object OnResumeRecording : ChatDetailAction
+    data object OnDiscardRecording : ChatDetailAction
+    data object OnSendVoiceMessage : ChatDetailAction
+    data object OnPreviewVoiceMessage : ChatDetailAction
+    data class OnPlayAudioClick(val attachmentId: String, val url: String) : ChatDetailAction
+    data class OnPauseAudioClick(val attachmentId: String, ) : ChatDetailAction
+    data class OnSeekAudio(val attachmentId: String, val position: Long) : ChatDetailAction
 }

@@ -2,8 +2,10 @@ package com.plcoding.chat.presentation.chat_detail
 
 import androidx.compose.foundation.text.input.TextFieldState
 import com.plcoding.chat.domain.models.ConnectionState
+import com.plcoding.chat.presentation.model.AudioPlaybackState
 import com.plcoding.chat.presentation.model.ChatUi
 import com.plcoding.chat.presentation.model.MessageUi
+import com.plcoding.chat.presentation.model.VoiceRecordingState
 import com.plcoding.chat.presentation.util.TypingUsers
 import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
 import com.plcoding.core.presentation.media.PickedImageData
@@ -19,7 +21,7 @@ data class ChatDetailState(
     val isPaginationLoading: Boolean = false,
     val paginationError: UiText? = null,
     val endReached: Boolean = false,
-    val messageWithOpenMenu: MessageUi.LocalUserMessage? = null,
+    val messageWithOpenMenu: MessageUi.LocalUser? = null,
     val attachmentWithOpenMenu: MessageAttachmentUi? = null,
     val bannerState: BannerState = BannerState(),
     val isChatOptionsOpen: Boolean = false,
@@ -29,7 +31,9 @@ data class ChatDetailState(
     val attachmentPreviewData: Any? = null,
     val typingUsers: TypingUsers = emptyMap(),
     val isAdminLeaveConfirmationVisible: Boolean = false,
-    val memberToRemove: String? = null
+    val memberToRemove: String? = null,
+    val voiceRecordingState: VoiceRecordingState = VoiceRecordingState.Idle,
+    val audioPlaybackState: AudioPlaybackState = AudioPlaybackState()
 )
 
 data class BannerState(

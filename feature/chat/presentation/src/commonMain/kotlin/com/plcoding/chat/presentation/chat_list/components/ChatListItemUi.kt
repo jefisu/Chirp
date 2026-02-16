@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import chirp.feature.chat.presentation.generated.resources.Res
 import chirp.feature.chat.presentation.generated.resources.sent_a_image
 import chirp.feature.chat.presentation.generated.resources.sent_n_images
+import chirp.feature.chat.presentation.generated.resources.voice_message
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
 import com.plcoding.chat.domain.models.MessageAttachmentType
@@ -32,6 +33,7 @@ import com.plcoding.chat.presentation.chat_detail.components.TypingFormatter
 import com.plcoding.chat.presentation.chat_detail.components.TypingIndicator
 import com.plcoding.chat.presentation.components.ChatItemHeaderRow
 import com.plcoding.chat.presentation.model.ChatUi
+import com.plcoding.chat.presentation.util.formatDuration
 import com.plcoding.core.designsystem.components.avatar.ChatParticipantUi
 import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
@@ -79,9 +81,15 @@ fun ChatListItemUi(
             } else if (chat.lastMessage != null) {
                 val chatMessage = chat.lastMessage
                 val imageCount = chatMessage.attachments
-                    .filter { it.type == MessageAttachmentType.IMAGE }
-                    .size
+                    .count { it.type == MessageAttachmentType.IMAGE }
+                val voiceMessage = chatMessage.attachments
+                    .firstOrNull { it.type == MessageAttachmentType.AUDIO }
+
                 val messageContent = when {
+                    voiceMessage != null -> {
+                        val duration = chat.lastMessageAudioDuration?.formatDuration()
+                        stringResource(Res.string.voice_message, duration.orEmpty())
+                    }
                     !chatMessage.content.isNullOrBlank() -> chatMessage.content
                     imageCount == 1 -> stringResource(Res.string.sent_a_image)
                     else -> stringResource(Res.string.sent_n_images, imageCount)
@@ -157,6 +165,7 @@ fun ChatListItemUiPreview() {
                     attachments = emptyList()
                 ),
                 lastMessageSenderUsername = "Philipp",
+                lastMessageFormattedDate = null,
                 creatorId = null
             )
         )

@@ -10,6 +10,7 @@ import chirp.feature.chat.presentation.generated.resources.Res
 import chirp.feature.chat.presentation.generated.resources.error_saving_image
 import chirp.feature.chat.presentation.generated.resources.image_saved_successfully
 import chirp.feature.chat.presentation.generated.resources.today
+import com.plcoding.chat.domain.audio.AudioMetadataRepository
 import com.plcoding.chat.domain.chat.ChatConnectionClient
 import com.plcoding.chat.domain.chat.ChatRepository
 import com.plcoding.chat.domain.message.MessageAttachmentRepository
@@ -20,9 +21,15 @@ import com.plcoding.chat.domain.models.OutgoingNewMessage
 import com.plcoding.chat.presentation.chat_list_detail.ChatListDetailState
 import com.plcoding.chat.presentation.mappers.toUi
 import com.plcoding.chat.presentation.mappers.toUiListWithEvents
+import com.plcoding.chat.presentation.model.AudioPlaybackState
 import com.plcoding.chat.presentation.model.MessageUi
+import com.plcoding.chat.presentation.model.VoiceRecordingState
 import com.plcoding.chat.presentation.util.toFile
+import com.plcoding.chat.presentation.util.toUiText
 import com.plcoding.core.designsystem.components.chat.MessageAttachmentUi
+import com.plcoding.core.domain.audio.AudioPlayer
+import com.plcoding.core.domain.audio.AudioRecorder
+import com.plcoding.core.domain.audio.PlaybackState
 import com.plcoding.core.domain.auth.SessionStorage
 import com.plcoding.core.domain.media.File
 import com.plcoding.core.domain.util.DataErrorException
@@ -40,6 +47,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -58,9 +66,11 @@ class ChatDetailViewModel(
     private val messageRepository: MessageRepository,
     private val connectionClient: ChatConnectionClient,
     private val messageAttachmentRepository: MessageAttachmentRepository,
-    private val sharedState: StateFlow<ChatListDetailState>
+    private val sharedState: StateFlow<ChatListDetailState>,
+    private val audioRecorder: AudioRecorder,
+    private val audioPlayer: AudioPlayer,
+    private val audioMetadataRepository: AudioMetadataRepository,
 ) : ViewModel() {
-
     private val eventChannel = Channel<ChatDetailEvent>()
     val events = eventChannel.receiveAsFlow()
 
@@ -71,6 +81,8 @@ class ChatDetailViewModel(
     private var currentPaginator: Paginator<String?, ChatHistoryItem>? = null
 
     private val temporaryAttachmentFiles = MutableStateFlow(emptyMap<String, File>())
+
+    private val recordingAmplitudes = MutableStateFlow(emptyList<Float>())
 
     private val chatInfoFlow = _chatId
         .onEach { chatId ->
@@ -98,14 +110,23 @@ class ChatDetailViewModel(
         connectionState == ConnectionState.CONNECTED && (text.isNotBlank() || images.isNotEmpty())
     }
 
-
     private val stateWithMessages = combine(
-        _state,
-        chatInfoFlow,
-        sessionStorage.observeAuthInfo(),
-        temporaryAttachmentFiles,
-        sharedState
-    ) { currentState, chatInfo, authInfo, temporaryFiles, sharedState ->
+        combine(
+            _state,
+            chatInfoFlow,
+            sessionStorage.observeAuthInfo(),
+        ) { state, info, auth ->
+            Triple(state, info, auth)
+        },
+        combine(
+            temporaryAttachmentFiles,
+            audioMetadataRepository.getAllAudioMetadata(),
+            sharedState,
+        ) { files, metadataList, shared ->
+            val metadataMap = metadataList.associateBy { it.attachmentId }
+            Triple(files, metadataMap, shared)
+        },
+    ) { (currentState, chatInfo, authInfo), (temporaryFiles, metadataMap, sharedState) ->
         if (authInfo == null) {
             return@combine ChatDetailState()
         }
@@ -118,6 +139,7 @@ class ChatDetailViewModel(
                 localUserId = authInfo.user.id,
                 messages = chatInfo.messages,
                 events = chatInfo.events,
+                audioMetadataMap = metadataMap,
                 temporaryAttachmentFiles = temporaryFiles
             ),
             typingUsers = typingUsers
@@ -138,6 +160,7 @@ class ChatDetailViewModel(
                 observeChatMessages()
                 observeCanSendMessage()
                 observeOwnTypingStatus()
+                observePlaybackState()
                 hasLoadedInitialData = true
             }
         }
@@ -176,6 +199,16 @@ class ChatDetailViewModel(
             is ChatDetailAction.OnRemoveMemberClick -> showRemoveMemberConfirmation(action.userId)
             ChatDetailAction.OnConfirmRemoveMember -> confirmRemoveMember()
             ChatDetailAction.OnDismissRemoveMemberConfirmation -> dismissRemoveMemberConfirmation()
+            ChatDetailAction.OnMicrophoneClick -> startVoiceRecording()
+            ChatDetailAction.OnCancelRecording -> cancelRecording()
+            ChatDetailAction.OnPauseRecording -> pauseRecording()
+            ChatDetailAction.OnResumeRecording -> resumeRecording()
+            ChatDetailAction.OnDiscardRecording -> discardRecording()
+            ChatDetailAction.OnSendVoiceMessage -> sendVoiceMessage()
+            ChatDetailAction.OnPreviewVoiceMessage -> previewVoiceMessage()
+            is ChatDetailAction.OnPlayAudioClick -> playAudio(action.attachmentId, action.url)
+            is ChatDetailAction.OnPauseAudioClick -> pauseAudio(action.attachmentId)
+            is ChatDetailAction.OnSeekAudio -> seekAudio(action.attachmentId, action.position)
             else -> Unit
         }
     }
@@ -327,7 +360,7 @@ class ChatDetailViewModel(
         }
     }
 
-    private fun onMessageLongClick(message: MessageUi.LocalUserMessage) {
+    private fun onMessageLongClick(message: MessageUi.LocalUser) {
         _state.update {
             it.copy(
                 messageWithOpenMenu = message
@@ -335,7 +368,7 @@ class ChatDetailViewModel(
         }
     }
 
-    private fun deleteMessage(message: MessageUi.LocalUserMessage) {
+    private fun deleteMessage(message: MessageUi.LocalUser) {
         viewModelScope.launch {
             messageRepository
                 .deleteMessage(message.id)
@@ -345,7 +378,7 @@ class ChatDetailViewModel(
         }
     }
 
-    private fun retryMessage(message: MessageUi.LocalUserMessage) {
+    private fun retryMessage(message: MessageUi.LocalUser) {
         viewModelScope.launch {
             messageRepository
                 .retryMessage(message.id)
@@ -499,7 +532,7 @@ class ChatDetailViewModel(
 
         _state.update {
             it.copy(
-                isChatOptionsOpen = false
+                isChatOptionsOpen = false,
             )
         }
 
@@ -619,8 +652,312 @@ class ChatDetailViewModel(
         }
     }
 
+    private fun startVoiceRecording() {
+        viewModelScope.launch {
+            audioRecorder
+                .startRecording()
+                .onSuccess {
+                    observeRecordingState()
+                }.onFailure { error ->
+                    eventChannel.send(ChatDetailEvent.OnError(error.toUiText()))
+                }
+        }
+    }
+
+    private fun observeRecordingState() {
+        audioRecorder.amplitudes
+            .onEach { amplitude ->
+                val currentList = recordingAmplitudes.value
+                val updatedList = (currentList + amplitude).takeLast(50)
+                recordingAmplitudes.update { updatedList }
+
+                _state.update {
+                    val recordingState = it.voiceRecordingState
+                    if (recordingState is VoiceRecordingState.Recording) {
+                        it.copy(
+                            voiceRecordingState =
+                                recordingState.copy(
+                                    durationMs = audioRecorder.recordingDuration.value,
+                                    amplitudes = updatedList,
+                                ),
+                        )
+                    } else {
+                        it
+                    }
+                }
+            }.launchIn(viewModelScope)
+
+        _state.update {
+            it.copy(
+                voiceRecordingState = VoiceRecordingState.Recording(
+                    durationMs = 0L,
+                    amplitudes = emptyList(),
+                ),
+            )
+        }
+    }
+
+    private fun pauseRecording() {
+        viewModelScope.launch {
+            audioRecorder
+                .pauseRecording()
+                .onSuccess {
+                    _state.update {
+                        it.copy(
+                            voiceRecordingState = VoiceRecordingState.Paused(
+                                durationMs = audioRecorder.recordingDuration.value,
+                                waveformData = recordingAmplitudes.value,
+                                audioFile = null
+                            ),
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    eventChannel.send(ChatDetailEvent.OnError(error.toUiText()))
+                }
+        }
+    }
+
+    private fun resumeRecording() {
+        viewModelScope.launch {
+            audioRecorder
+                .resumeRecording()
+                .onSuccess {
+                    _state.update {
+                        it.copy(
+                            voiceRecordingState = VoiceRecordingState.Recording(
+                                durationMs = audioRecorder.recordingDuration.value,
+                                amplitudes = recordingAmplitudes.value,
+                            ),
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    eventChannel.send(ChatDetailEvent.OnError(error.toUiText()))
+                }
+        }
+    }
+
+    private fun cancelRecording() {
+        audioRecorder.cancelRecording()
+        recordingAmplitudes.update { emptyList() }
+        _state.update {
+            it.copy(voiceRecordingState = VoiceRecordingState.Idle)
+        }
+    }
+
+    private fun discardRecording() {
+        viewModelScope.launch {
+            audioRecorder.stopRecording()
+            recordingAmplitudes.update { emptyList() }
+            _state.update {
+                it.copy(voiceRecordingState = VoiceRecordingState.Idle)
+            }
+        }
+    }
+
+    private fun sendVoiceMessage() {
+        val currentState = _state.value.voiceRecordingState
+        if (currentState !is VoiceRecordingState.Paused) return
+
+        _state.update {
+            it.copy(voiceRecordingState = VoiceRecordingState.Sending)
+        }
+
+        val currentChatId = _chatId.value ?: return
+
+        viewModelScope.launch {
+            audioRecorder
+                .stopRecording()
+                .onSuccess { file ->
+                    messageRepository
+                        .sendMessage(
+                            OutgoingNewMessage(
+                                chatId = currentChatId,
+                                messageId = Uuid.random().toString(),
+                                content = null,
+                                media = listOf(file),
+                            ),
+                        )
+                        .onSuccess { attachments ->
+                            recordingAmplitudes.update { emptyList() }
+                            _state.update {
+                                it.copy(voiceRecordingState = VoiceRecordingState.Idle)
+                            }
+                            temporaryAttachmentFiles.update {
+                                attachments.associate { it.messageAttachment.id to it.file }
+                            }
+                        }
+                        .onFailure { error ->
+                            eventChannel.send(ChatDetailEvent.OnError(error.toUiText()))
+                            _state.update {
+                                it.copy(voiceRecordingState = VoiceRecordingState.Idle)
+                            }
+                        }
+                }
+                .onFailure { error ->
+                    eventChannel.send(ChatDetailEvent.OnError(error.toUiText()))
+                    _state.update {
+                        it.copy(voiceRecordingState = VoiceRecordingState.Idle)
+                    }
+                }
+        }
+    }
+
+    private fun previewVoiceMessage() {
+        val currentState = _state.value.voiceRecordingState
+        if (currentState !is VoiceRecordingState.Paused) return
+
+        val audioFile = currentState.audioFile
+        if (audioFile == null) {
+            viewModelScope.launch {
+                audioRecorder
+                    .stopRecording()
+                    .onSuccess { file ->
+                        playAudioFromFile(file)
+                        _state.update {
+                            it.copy(
+                                voiceRecordingState = VoiceRecordingState.Paused(
+                                    durationMs = currentState.durationMs,
+                                    waveformData = currentState.waveformData,
+                                    audioFile = file,
+                                ),
+                            )
+                        }
+                    }
+                    .onFailure { error ->
+                        eventChannel.send(ChatDetailEvent.OnError(error.toUiText()))
+                    }
+            }
+            return
+        }
+
+        playAudioFromFile(audioFile)
+    }
+
+    private fun playAudioFromFile(file: File) {
+        viewModelScope.launch {
+            val playbackState = _state.value.audioPlaybackState.playbackState
+            val playingId = _state.value.audioPlaybackState.playingAttachmentId
+
+            if (playingId == null && playbackState == PlaybackState.PLAYING) {
+                audioPlayer.pause()
+            } else if (playingId == null && playbackState == PlaybackState.PAUSED) {
+                audioPlayer.resume()
+            } else {
+                audioPlayer.stop()
+                _state.update {
+                    it.copy(
+                        audioPlaybackState = AudioPlaybackState(playingAttachmentId = null),
+                    )
+                }
+                audioPlayer.playFromBytes(file.bytes, "audio/m4a")
+            }
+        }
+    }
+
+    private fun playAudio(
+        attachmentId: String,
+        url: String,
+    ) {
+        viewModelScope.launch {
+            val currentPlayingId = _state.value.audioPlaybackState.playingAttachmentId
+            val playbackState = _state.value.audioPlaybackState.playbackState
+
+            if (currentPlayingId == attachmentId && playbackState == PlaybackState.PAUSED) {
+                audioPlayer.resume()
+                return@launch
+            }
+
+            if (currentPlayingId != null && currentPlayingId != attachmentId) {
+                audioPlayer.stop()
+            }
+
+            audioPlayer.play(url)
+            _state.update {
+                it.copy(
+                    audioPlaybackState = it.audioPlaybackState.copy(
+                        playingAttachmentId = attachmentId,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun pauseAudio(attachmentId: String) {
+        if (_state.value.audioPlaybackState.playingAttachmentId == attachmentId) {
+            audioPlayer.pause()
+        }
+    }
+
+    private fun seekAudio(
+        attachmentId: String,
+        position: Long,
+    ) {
+        if (_state.value.audioPlaybackState.playingAttachmentId == attachmentId) {
+            audioPlayer.seekTo(position)
+        }
+    }
+
+    private fun observePlaybackState() {
+        audioPlayer.playbackState
+            .onEach { state ->
+                _state.update { currentState ->
+                    currentState.copy(
+                        audioPlaybackState = currentState.audioPlaybackState.copy(
+                            playbackState = state,
+                        ),
+                    )
+                }
+            }.launchIn(viewModelScope)
+
+        audioPlayer.currentPosition
+            .onEach { position ->
+                _state.update { currentState ->
+                    currentState.copy(
+                        audioPlaybackState = currentState.audioPlaybackState.copy(
+                            currentPosition = position,
+                        ),
+                    )
+                }
+            }.launchIn(viewModelScope)
+
+        audioPlayer.duration
+            .onEach { duration ->
+                _state.update { currentState ->
+                    currentState.copy(
+                        audioPlaybackState = currentState.audioPlaybackState.copy(
+                            duration = duration,
+                        ),
+                    )
+                }
+            }.launchIn(viewModelScope)
+
+        audioPlayer.currentPlayingUrl
+            .filterNotNull()
+            .onEach {
+                _state.update { currentState ->
+                    currentState.copy(
+                        audioPlaybackState = AudioPlaybackState(),
+                    )
+                }
+            }.launchIn(viewModelScope)
+
+        audioPlayer.waveformData
+            .onEach { waveform ->
+                _state.update { currentState ->
+                    currentState.copy(
+                        audioPlaybackState = currentState.audioPlaybackState.copy(
+                            waveformData = waveform,
+                        ),
+                    )
+                }
+            }.launchIn(viewModelScope)
+    }
+
     override fun onCleared() {
         super.onCleared()
+        audioPlayer.release()
         _chatId.value?.let { chatId ->
             viewModelScope.launch {
                 connectionClient.sendTypingEvent(chatId, false)

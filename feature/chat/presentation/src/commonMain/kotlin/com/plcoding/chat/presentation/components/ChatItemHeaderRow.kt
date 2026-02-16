@@ -1,9 +1,11 @@
 package com.plcoding.chat.presentation.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,10 +19,13 @@ import chirp.feature.chat.presentation.generated.resources.group_chat
 import chirp.feature.chat.presentation.generated.resources.only_you
 import chirp.feature.chat.presentation.generated.resources.you
 import com.plcoding.chat.presentation.model.ChatUi
+import com.plcoding.chat.presentation.util.ChatPreviewData
 import com.plcoding.core.designsystem.components.avatar.ChirpStackedAvatars
+import com.plcoding.core.designsystem.theme.ChirpTheme
 import com.plcoding.core.designsystem.theme.extended
 import com.plcoding.core.designsystem.theme.titleXSmall
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun ChatItemHeaderRow(
@@ -33,7 +38,7 @@ fun ChatItemHeaderRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if(chat.otherParticipants.isNotEmpty()) {
+        if (chat.otherParticipants.isNotEmpty()) {
             ChirpStackedAvatars(
                 avatars = chat.otherParticipants,
             )
@@ -44,7 +49,7 @@ fun ChatItemHeaderRow(
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
-                text = if(!isGroupChat) {
+                text = if (!isGroupChat) {
                     chat.otherParticipants.firstOrNull()?.username
                         ?: stringResource(Res.string.only_you)
                 } else {
@@ -56,7 +61,7 @@ fun ChatItemHeaderRow(
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth()
             )
-            if(isGroupChat) {
+            if (isGroupChat) {
                 val you = stringResource(Res.string.you)
                 val formattedUsernames = remember(chat.otherParticipants) {
                     "$you, " + chat.otherParticipants.joinToString {
@@ -73,5 +78,46 @@ fun ChatItemHeaderRow(
                 )
             }
         }
+        chat.lastMessageFormattedDate?.let { formattedDate ->
+            Text(
+                text = formattedDate.asString(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.extended.textPlaceholder,
+                modifier = Modifier
+                    .align(if (isGroupChat) Alignment.Bottom else Alignment.CenterVertically)
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun ChatItemHeaderRowPreview() {
+    ChirpTheme {
+        ChatItemHeaderRow(
+            chat = ChatPreviewData.chatUi.copy(
+                otherParticipants = listOf(ChatPreviewData.otherParticipant1)
+            ),
+            isGroupChat = false,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.extended.surfaceLower)
+                .padding(16.dp)
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun ChatItemHeaderRowGroupPreview() {
+    ChirpTheme(darkTheme = true) {
+        ChatItemHeaderRow(
+            chat = ChatPreviewData.chatUi,
+            isGroupChat = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.extended.surfaceLower)
+                .padding(16.dp)
+        )
     }
 }

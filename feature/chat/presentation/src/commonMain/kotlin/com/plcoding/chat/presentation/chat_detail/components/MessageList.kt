@@ -24,6 +24,7 @@ import chirp.feature.chat.presentation.generated.resources.no_messages
 import chirp.feature.chat.presentation.generated.resources.no_messages_subtitle
 import chirp.feature.chat.presentation.generated.resources.retry
 import com.plcoding.chat.presentation.components.EmptySection
+import com.plcoding.chat.presentation.model.AudioPlaybackState
 import com.plcoding.chat.presentation.model.MessageUi
 import com.plcoding.core.designsystem.components.buttons.ChirpButton
 import com.plcoding.core.designsystem.components.buttons.ChirpButtonStyle
@@ -35,15 +36,18 @@ fun MessageList(
     messages: List<MessageUi>,
     paginationError: String?,
     isPaginationLoading: Boolean,
-    messageWithOpenMenu: MessageUi.LocalUserMessage?,
+    messageWithOpenMenu: MessageUi.LocalUser?,
+    audioPlaybackState: AudioPlaybackState,
     listState: LazyListState,
-    onMessageLongClick: (MessageUi.LocalUserMessage) -> Unit,
-    onMessageRetryClick: (MessageUi.LocalUserMessage) -> Unit,
+    onMessageLongClick: (MessageUi.LocalUser) -> Unit,
+    onMessageRetryClick: (MessageUi.LocalUser) -> Unit,
     onRetryPaginationClick: () -> Unit,
     onDismissMessageMenu: () -> Unit,
-    onDeleteMessageClick: (MessageUi.LocalUserMessage) -> Unit,
+    onDeleteMessageClick: (MessageUi.LocalUser) -> Unit,
     onAttachmentClick: (MessageAttachmentUi) -> Unit,
     onAttachmentLongClick: (MessageAttachmentUi) -> Unit,
+    onPlayAudioClick: (MessageAttachmentUi.Audio) -> Unit,
+    onPauseAudioClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (messages.isEmpty()) {
@@ -72,12 +76,15 @@ fun MessageList(
                 MessageListItemUi(
                     messageUi = message,
                     messageWithOpenMenu = messageWithOpenMenu,
+                    audioPlaybackState = audioPlaybackState,
                     onMessageLongClick = onMessageLongClick,
                     onDismissMessageMenu = onDismissMessageMenu,
                     onDeleteClick = onDeleteMessageClick,
                     onRetryClick = onMessageRetryClick,
                     onAttachmentClick = onAttachmentClick,
                     onAttachmentLongClick = onAttachmentLongClick,
+                    onPlayAudioClick = onPlayAudioClick,
+                    onPauseAudioClick = onPauseAudioClick,
                     modifier = Modifier
                         .fillMaxWidth()
                         .animateItem()
