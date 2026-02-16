@@ -5,6 +5,7 @@ package com.plcoding.chat.data.message
 import com.plcoding.chat.data.dto.websocket.OutgoingWebSocketDto
 import com.plcoding.chat.data.mappers.toChatEventEntity
 import com.plcoding.chat.data.mappers.toChatMessageEntity
+import com.plcoding.chat.data.mappers.toEntity
 import com.plcoding.chat.data.mappers.toMessageAttachmentDto
 import com.plcoding.chat.data.mappers.toMessageAttachmentEntity
 import com.plcoding.chat.data.mappers.toMessageAttachmentsEntity
@@ -15,6 +16,9 @@ import com.plcoding.chat.data.network.KtorWebSocketConnector
 import com.plcoding.chat.database.ChirpChatDatabase
 import com.plcoding.chat.database.entities.AttachmentUploadStatus
 import com.plcoding.chat.database.entities.ChatMessageEntity
+import com.plcoding.chat.database.entities.MessageAttachmentEntity
+import com.plcoding.chat.domain.audio.AudioMetadata
+import com.plcoding.chat.domain.audio.AudioMetadataRepository
 import com.plcoding.chat.domain.message.ChatMessageService
 import com.plcoding.chat.domain.message.MessageAttachmentRepository
 import com.plcoding.chat.domain.message.MessageAttachmentScheduler
@@ -23,11 +27,14 @@ import com.plcoding.chat.domain.models.BackgroundUploadInfo
 import com.plcoding.chat.domain.models.ChatHistoryItem
 import com.plcoding.chat.domain.models.ChatMessage
 import com.plcoding.chat.domain.models.ChatMessageDeliveryStatus
+import com.plcoding.chat.domain.models.MessageAttachmentType
 import com.plcoding.chat.domain.models.MessageAttachmentUploadStatus
 import com.plcoding.chat.domain.models.MessageWithSender
 import com.plcoding.chat.domain.models.OutgoingNewMessage
 import com.plcoding.chat.domain.models.PendingAttachment
 import com.plcoding.core.data.database.safeDatabaseUpdate
+import com.plcoding.core.domain.audio.AudioFileCache
+import com.plcoding.core.domain.audio.AudioMetadataExtractor
 import com.plcoding.core.domain.auth.SessionStorage
 import com.plcoding.core.domain.logging.ChirpLogger
 import com.plcoding.core.domain.util.DataError
@@ -36,11 +43,14 @@ import com.plcoding.core.domain.util.Result
 import com.plcoding.core.domain.util.onFailure
 import com.plcoding.core.domain.util.onSuccess
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
@@ -54,9 +64,11 @@ class OfflineFirstMessageRepository(
     private val applicationScope: CoroutineScope,
     private val messageAttachmentRepository: MessageAttachmentRepository,
     private val messageAttachmentScheduler: MessageAttachmentScheduler,
-    private val logger: ChirpLogger
+    private val logger: ChirpLogger,
+    private val audioFileCache: AudioFileCache,
+    private val audioMetadataExtractor: AudioMetadataExtractor,
+    private val audioMetadataRepository: AudioMetadataRepository,
 ) : MessageRepository {
-
     override suspend fun sendMessage(message: OutgoingNewMessage): Result<List<PendingAttachment>, DataError> {
         return safeDatabaseUpdate {
             val localUser = sessionStorage.observeAuthInfo().first()?.user
@@ -90,7 +102,7 @@ class OfflineFirstMessageRepository(
                 attachments = attachmentEntities,
                 pendingAttachments = pendingAttachmentEntities,
                 messageAttachmentDao = database.messageAttachmentDao,
-                pendingAttachmentDao = database.pendingAttachmentDao
+                pendingAttachmentDao = database.pendingAttachmentDao,
             )
 
             applicationScope.launch {
@@ -147,10 +159,19 @@ class OfflineFirstMessageRepository(
 
     override suspend fun deleteMessage(messageId: String): EmptyResult<DataError> {
         val messageWithSender = database.chatMessageDao.getMessageById(messageId)
+        val audioAttachmentUrls = messageWithSender
+            ?.attachments
+            ?.filter { it.type.startsWith("audio/") }
+            ?.map { it.url }
+            ?: emptyList()
+
+        if (audioAttachmentUrls.isNotEmpty()) {
+            audioFileCache.deleteFilesByUrls(audioAttachmentUrls)
+        }
 
         if (
-            messageWithSender != null
-            && messageWithSender.message.deliveryStatus != ChatMessageDeliveryStatus.SENT.name
+            messageWithSender != null &&
+            messageWithSender.message.deliveryStatus != ChatMessageDeliveryStatus.SENT.name
         ) {
             return safeDatabaseUpdate {
                 messageWithSender.attachments.forEach { attachment ->
@@ -340,6 +361,11 @@ class OfflineFirstMessageRepository(
             it.toMessageAttachmentsEntity(status = AttachmentUploadStatus.UPLOADED)
         }
 
+        val audioMetadataList = allServerAttachments.filter {
+            it.type == MessageAttachmentType.AUDIO.name
+        }
+        saveFetchedAudiosAttachment(audioMetadataList)
+
         database.chatMessageDao.saveFetchedMessages(
             chatId = chatId,
             serverMessages = serverMessages,
@@ -366,5 +392,26 @@ class OfflineFirstMessageRepository(
             val eventEntities = events.map { it.toChatEventEntity() }
             database.chatEventDao.upsertEvents(eventEntities)
         }
+    }
+
+    private suspend fun saveFetchedAudiosAttachment(
+        allServerAudios: List<MessageAttachmentEntity>
+    ) {
+        if (allServerAudios.isEmpty()) return
+        if (allServerAudios.all { it.type != MessageAttachmentType.AUDIO.name }) return
+
+        val audioMetadataEntities = supervisorScope {
+            allServerAudios.map {
+                async {
+                    val url = it.url
+                    AudioMetadata(
+                        attachmentId = it.id,
+                        durationMs = audioMetadataExtractor.extractDurationMs(url),
+                        amplitudes = audioMetadataExtractor.extractAmplitudes(url)
+                    ).toEntity()
+                }
+            }
+        }.awaitAll()
+        database.audioMetadataDao.upsertAll(audioMetadataEntities)
     }
 }

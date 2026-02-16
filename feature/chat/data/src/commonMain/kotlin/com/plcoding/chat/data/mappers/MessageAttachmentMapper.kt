@@ -43,6 +43,18 @@ fun MessageAttachmentDto.toMessageAttachment(): MessageAttachment {
     )
 }
 
+fun MessageAttachmentDto.toMessageAttachmentEntity(
+    messageId: String
+): MessageAttachmentEntity {
+    return MessageAttachmentEntity(
+        id = id,
+        url = url,
+        type = type,
+        messageId = messageId,
+        status = AttachmentUploadStatus.UPLOADED,
+    )
+}
+
 fun MessageAttachment.toMessageAttachmentDto(): MessageAttachmentDto {
     return MessageAttachmentDto(
         id = id,

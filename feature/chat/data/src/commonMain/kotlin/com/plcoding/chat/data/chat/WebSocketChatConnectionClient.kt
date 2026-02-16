@@ -17,6 +17,7 @@ import com.plcoding.chat.domain.chat.ChatConnectionClient
 import com.plcoding.chat.domain.chat.ChatDeletedEvent
 import com.plcoding.chat.domain.chat.ChatRepository
 import com.plcoding.chat.domain.chat.RemovedFromChatEvent
+import com.plcoding.core.domain.audio.AudioFileCache
 import com.plcoding.core.domain.auth.SessionStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -34,7 +35,8 @@ class WebSocketChatConnectionClient(
     private val database: ChirpChatDatabase,
     private val sessionStorage: SessionStorage,
     private val json: Json,
-    private val applicationScope: CoroutineScope
+    private val applicationScope: CoroutineScope,
+    private val audioFileCache: AudioFileCache,
 ) : ChatConnectionClient {
 
     override val chatMessages = incomingMessages<IncomingWebSocketDto.NewMessageDto, _> {
@@ -139,6 +141,17 @@ class WebSocketChatConnectionClient(
     }
 
     private suspend fun deleteMessage(message: IncomingWebSocketDto.MessageDeletedDto) {
+        val messageWithSender = database.chatMessageDao.getMessageById(message.messageId)
+        val audioUrls = messageWithSender
+            ?.attachments
+            ?.filter { it.type.startsWith("audio/") }
+            ?.map { it.url }
+            ?: emptyList()
+
+        if (audioUrls.isNotEmpty()) {
+            audioFileCache.deleteFilesByUrls(audioUrls)
+        }
+
         database.chatMessageDao.deleteMessageById(message.messageId)
     }
 

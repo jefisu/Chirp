@@ -7,9 +7,15 @@ import com.plcoding.core.domain.media.File
 import kotlin.time.Instant
 
 fun File.toAttachmentUploadRequest(): AttachmentUploadRequest {
+    val destination = when {
+        mimeType?.startsWith("image") == true -> "images"
+        mimeType?.startsWith("audio") == true -> "audios"
+        else -> error("Unsupported mime type: $mimeType")
+    }
     return AttachmentUploadRequest(
         fileName = name,
-        mimeType = mimeType ?: error("MimeType unknown")
+        mimeType = mimeType ?: error("MimeType unknown"),
+        destination = destination
     )
 }
 

@@ -5,5 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AttachmentUploadRequest(
     val fileName: String,
-    val mimeType: String
+    val mimeType: String,
+    val destination: String
 )

@@ -1,6 +1,7 @@
 package com.plcoding.chat.data.di
 
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.plcoding.chat.data.audio.AudioMetadataRepositoryImpl
 import com.plcoding.chat.data.chat.KtorChatService
 import com.plcoding.chat.data.chat.OfflineFirstChatRepository
 import com.plcoding.chat.data.chat.WebSocketChatConnectionClient
@@ -14,6 +15,7 @@ import com.plcoding.chat.data.notification.KtorDeviceTokenService
 import com.plcoding.chat.data.participant.KtorChatParticipantService
 import com.plcoding.chat.data.participant.OfflineFirstChatParticipantRepository
 import com.plcoding.chat.database.DatabaseFactory
+import com.plcoding.chat.domain.audio.AudioMetadataRepository
 import com.plcoding.chat.domain.chat.ChatConnectionClient
 import com.plcoding.chat.domain.chat.ChatRepository
 import com.plcoding.chat.domain.chat.ChatService
@@ -58,4 +60,5 @@ val chatDataModule = module {
     }
     singleOf(::KtorMessageAttachmentService).bind<MessageAttachmentService>()
     singleOf(::OfflineFirstMessageAttachmentRepository).bind<MessageAttachmentRepository>()
+    singleOf(::AudioMetadataRepositoryImpl).bind<AudioMetadataRepository>()
 }
